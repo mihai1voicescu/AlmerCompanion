@@ -1,6 +1,7 @@
 package io.almer.almercompanion.screen.main
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.MaterialTheme
@@ -9,6 +10,7 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
@@ -19,7 +21,10 @@ import io.almer.almercompanion.R
 object Info : MainScreenType(R.drawable.ic_round_info_24, R.string.navigation_item_info) {
     @Composable
     override fun Screen() {
-        LazyColumn {
+        LazyColumn(
+            Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.SpaceEvenly,
+        ) {
             item {
                 InfoItem(
                     name = "Battery",
@@ -37,7 +42,11 @@ fun InfoItem(
     icon: Painter,
     value: String
 ) {
-    Surface(Modifier.padding(10.dp, 2.dp)) {
+    Surface(
+        modifier = Modifier
+            .padding(10.dp, 2.dp),
+        shape = MaterialTheme.shapes.large
+    ) {
         Row(
             Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
