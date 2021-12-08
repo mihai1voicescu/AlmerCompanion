@@ -11,10 +11,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import io.almer.almercompanion.MainApp.Companion.mainApp
-import io.almer.almercompanion.screen.MainScreen
-import io.almer.almercompanion.screen.WiFiScreen
-import io.almer.almercompanion.screen.pathToMainScreen
-import io.almer.almercompanion.screen.pathToWifiScreen
+import io.almer.almercompanion.screen.*
 import io.almer.almercompanion.ui.theme.AlmerCompanionTheme
 
 class MainActivity : ComponentActivity() {
@@ -39,6 +36,7 @@ fun NavigationBootstrap() {
         NavHost(navController = navController, startDestination = navController.pathToMainScreen) {
             composable(navController.pathToMainScreen) { MainScreen() }
             composable(navController.pathToWifiScreen) { WiFiScreen() }
+            composable(navController.pathToBluetoothScreen) { BluetoothScreen() }
         }
     }
 }

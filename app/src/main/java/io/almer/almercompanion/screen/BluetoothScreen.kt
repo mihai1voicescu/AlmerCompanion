@@ -7,51 +7,36 @@ import io.almer.almercompanion.composable.loaders.ViewLoader
 import io.almer.almercompanion.composable.select.ListSelector
 import kotlinx.coroutines.delay
 
-
-data class WiFi(
+data class BluetoothDevice(
     val name: String,
-    val ssid: String,
-    val strength: Int,
-    val isKnown: Boolean,
+    val isPaired: Boolean
 )
-
-@Composable
-fun WiFiScreen() {
-    SelectWiFi()
-}
-
-val NavController.pathToWifiScreen get() = "wifi"
-
 
 private val mockData = listOf(
-    WiFi("Wifi1", "ssid1", 90, true),
-    WiFi("Wifi2", "ssid2", 90, false),
-    WiFi("Wifi3", "ssid3", 80, true),
-    WiFi("Wifi4", "ssid4", 70, false),
-    WiFi("Wifi5", "ssid5", 60, true),
-    WiFi("Wifi6", "ssid6", 50, false),
+    BluetoothDevice("Sony Headphones", true),
+    BluetoothDevice("Bose Headphones", false),
 )
 
-
 @Composable
-private fun SelectWiFi() {
+fun BluetoothScreen() {
     ViewLoader(
         stateLoader = {
             delay(2000)
             mockData
         }
     ) {
-        SelectWiFiListView(options = it, onSelect = {})
+        SelectBluethootListView(options = it, onSelect = {})
     }
 }
 
 @Composable
-private fun SelectWiFiListView(
-    options: Collection<WiFi>,
-    onSelect: (wifi: WiFi) -> Unit
+private fun SelectBluethootListView(
+    options: Collection<BluetoothDevice>,
+    onSelect: (device: BluetoothDevice) -> Unit
 ) {
     ListSelector(items = options, onSelect = onSelect) {
         Text(it.name)
     }
 }
 
+val NavController.pathToBluetoothScreen get() = "bluetooth"

@@ -11,16 +11,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.navigation.compose.rememberNavController
-import androidx.navigation.findNavController
 import io.almer.almercompanion.LocalNavHostController
-import io.almer.almercompanion.MainApp.Companion.mainAppNavController
 import io.almer.almercompanion.R
+import io.almer.almercompanion.screen.pathToBluetoothScreen
 import io.almer.almercompanion.screen.pathToWifiScreen
 
 object Info : MainScreenType(R.drawable.ic_round_info_24, R.string.navigation_item_info) {
@@ -33,6 +30,7 @@ object Info : MainScreenType(R.drawable.ic_round_info_24, R.string.navigation_it
             item {
                 Battery()
                 WiFi()
+                Bluetooth()
             }
         }
     }
@@ -62,6 +60,34 @@ private fun WiFi() {
         }
     )
 }
+
+
+@Composable
+@Preview
+private fun Bluetooth() {
+
+    BluetoothView("Sony Headphones")
+}
+
+@Composable
+private fun BluetoothView(
+    connectedTo: String?
+) {
+    val nav = LocalNavHostController.current
+    InfoItem(
+        name = "Bluetooth",
+        icon = painterResource(
+            id = if (connectedTo == null)
+                R.drawable.ic_baseline_bluetooth_disabled_24 else
+                R.drawable.ic_round_bluetooth_connected_24
+        ),
+        value = connectedTo ?: "Not connected",
+        onClick = {
+            nav.navigate(nav.pathToBluetoothScreen)
+        }
+    )
+}
+
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
