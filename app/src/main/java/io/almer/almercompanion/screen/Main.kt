@@ -23,6 +23,7 @@ fun MainScreen() {
                 value.nameId
             },
             restore = { nameId ->
+                // todo this might crash the app if the id of the string changes
                 MainScreenType.screens.firstOrNull {
                     it.nameId == nameId
                 }
@@ -31,6 +32,7 @@ fun MainScreen() {
     ) { mutableStateOf(MainScreenType.StartScreen) }
 
     AlmerLogoBackground {
+        homeScreenState.value.Screen()
         BottomNavigationContent(
             modifier = Modifier.align(Alignment.BottomCenter)
 //                    .semantics { contentDescription = bottomNavBarContentDescription },
