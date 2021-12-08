@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Almer Companion</string>
+    <string name="navigation_item_home">Home</string>
+    <string name="navigation_item_info">Info</string>
+</resources>
