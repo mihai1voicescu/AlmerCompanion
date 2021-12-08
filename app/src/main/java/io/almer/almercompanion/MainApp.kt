@@ -18,6 +18,10 @@ const val SELECT_DEVICE_REQUEST_CODE = 42
 
 class MainApp : Application() {
 
+    val settings by lazy {
+        AppSettings(this)
+    }
+
     val isWifiEnabled: Boolean
         get() {
             val cm = this.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
