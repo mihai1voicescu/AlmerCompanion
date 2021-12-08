@@ -12,7 +12,7 @@ sealed class MainScreenType(
     abstract fun Screen(): Unit
 
     companion object {
-        val StartScreen = Home as MainScreenType
+        val StartScreen = Info as MainScreenType
 
         val screens = arrayOf(
             Home, Info

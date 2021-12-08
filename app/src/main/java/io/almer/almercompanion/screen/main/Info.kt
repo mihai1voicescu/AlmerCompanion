@@ -11,11 +11,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.findNavController
+import io.almer.almercompanion.LocalNavHostController
+import io.almer.almercompanion.MainApp.Companion.mainAppNavController
 import io.almer.almercompanion.R
+import io.almer.almercompanion.screen.pathToWifiScreen
 
 object Info : MainScreenType(R.drawable.ic_round_info_24, R.string.navigation_item_info) {
     @Composable
@@ -25,14 +31,36 @@ object Info : MainScreenType(R.drawable.ic_round_info_24, R.string.navigation_it
             verticalArrangement = Arrangement.SpaceEvenly,
         ) {
             item {
-                InfoItem(
-                    name = "Battery",
-                    icon = painterResource(id = R.drawable.ic_round_battery_std_24),
-                    value = "98%"
-                )
+                Battery()
+                WiFi()
             }
         }
     }
+}
+
+@Composable
+@Preview
+private fun Battery() {
+    InfoItem(
+        name = "Battery",
+        icon = painterResource(id = R.drawable.ic_round_battery_std_24),
+        value = "98%"
+    )
+}
+
+@Composable
+@Preview
+private fun WiFi() {
+
+    val nav = LocalNavHostController.current
+    InfoItem(
+        name = "WiFi",
+        icon = painterResource(id = R.drawable.ic_baseline_wifi_24),
+        value = "Almer WiFi",
+        onClick = {
+            nav.navigate(nav.pathToWifiScreen)
+        }
+    )
 }
 
 @OptIn(ExperimentalMaterialApi::class)
@@ -83,6 +111,7 @@ private fun InfoItemContent(
             contentDescription = name,
             modifier = Modifier
                 .size(40.dp)
+                .padding(start = 10.dp)
         )
         Text(
             text = name,
@@ -106,9 +135,9 @@ private fun InfoItemContent(
 @Preview
 private fun InfoItemPreview() {
     InfoItem(
-        name = "Battery",
+        name = "Test",
         icon = painterResource(id = R.drawable.ic_round_battery_std_24),
-        value = "98%"
+        value = "Value"
     )
 }
 

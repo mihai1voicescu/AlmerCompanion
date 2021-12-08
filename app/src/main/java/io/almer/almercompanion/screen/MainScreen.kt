@@ -11,6 +11,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.NavController
 import io.almer.almercompanion.composable.background.AlmerLogoBackground
 import io.almer.almercompanion.screen.main.*
 
@@ -41,6 +42,9 @@ fun MainScreen() {
         )
     }
 }
+
+val NavController.pathToMainScreen get() = "main"
+
 
 @Composable
 fun BottomNavigationContent(

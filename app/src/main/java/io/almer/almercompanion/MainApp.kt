@@ -9,8 +9,12 @@ import android.content.IntentSender
 import android.net.ConnectivityManager
 import android.net.NetworkInfo
 import android.os.ParcelUuid
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
 import androidx.core.app.ActivityCompat.startIntentSenderForResult
 import androidx.core.content.ContentProviderCompat.requireContext
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.rememberNavController
 import java.util.*
 import java.util.regex.Pattern
 
@@ -82,5 +86,13 @@ class MainApp : Application() {
             // Match only Bluetooth devices whose service UUID matches this pattern.
             .addServiceUuid(ParcelUuid(UUID(0x123abcL, -1L)), null)
             .build()
+    }
+
+    companion object {
+
+        @Composable
+        fun mainApp(): MainApp {
+            return LocalContext.current.applicationContext!! as MainApp
+        }
     }
 }
