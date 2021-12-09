@@ -3,4 +3,6 @@
     <string name="navigation_item_home">Home</string>
     <string name="navigation_item_info">Info</string>
     <string name="navigation_item_remote">Remote</string>
+    <string name="navigation_item_remote_assist">Remote Assistant</string>
+    <string name="navigation_item_apps">Apps</string>
 </resources>

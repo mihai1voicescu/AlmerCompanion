@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavController
 import io.almer.almercompanion.composable.loaders.ViewLoader
 import io.almer.almercompanion.composable.select.ListSelector
+import io.almer.almercompanion.composable.text.BodyText
 import kotlinx.coroutines.delay
 
 data class BluetoothDevice(
@@ -21,7 +22,7 @@ private val mockData = listOf(
 fun BluetoothScreen() {
     ViewLoader(
         stateLoader = {
-            delay(2000)
+            delay(200)
             mockData
         }
     ) {
@@ -35,7 +36,7 @@ private fun SelectBluethootListView(
     onSelect: (device: BluetoothDevice) -> Unit
 ) {
     ListSelector(items = options, onSelect = onSelect) {
-        Text(it.name)
+        BodyText(it.name)
     }
 }
 

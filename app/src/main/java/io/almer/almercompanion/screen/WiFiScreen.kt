@@ -1,10 +1,14 @@
 package io.almer.almercompanion.screen
 
+import androidx.compose.material.Card
+import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavController
 import io.almer.almercompanion.composable.loaders.ViewLoader
 import io.almer.almercompanion.composable.select.ListSelector
+import io.almer.almercompanion.composable.text.BodyText
 import kotlinx.coroutines.delay
 
 
@@ -16,6 +20,7 @@ data class WiFi(
 )
 
 @Composable
+@Preview
 fun WiFiScreen() {
     SelectWiFi()
 }
@@ -37,7 +42,7 @@ private val mockData = listOf(
 private fun SelectWiFi() {
     ViewLoader(
         stateLoader = {
-            delay(2000)
+            delay(100)
             mockData
         }
     ) {
@@ -51,7 +56,9 @@ private fun SelectWiFiListView(
     onSelect: (wifi: WiFi) -> Unit
 ) {
     ListSelector(items = options, onSelect = onSelect) {
-        Text(it.name)
+        BodyText(
+            text = it.name,
+        )
     }
 }
 

@@ -15,7 +15,7 @@ sealed class MainScreenType(
         val StartScreen = Info as MainScreenType
 
         val screens = arrayOf(
-            Home, Info
+            Home, Info, Apps
         )
     }
 }
