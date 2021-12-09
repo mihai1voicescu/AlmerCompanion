@@ -1,10 +1,14 @@
 package io.almer.almercompanion.screen
 
+import android.content.Intent
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material.Icon
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.material.TopAppBar
+import androidx.compose.material3.Button
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.runtime.*
@@ -12,9 +16,11 @@ import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat.startActivity
 import androidx.navigation.NavController
 import io.almer.almercompanion.R
 import io.almer.almercompanion.composable.background.AlmerLogoBackground
@@ -23,6 +29,7 @@ import io.almer.almercompanion.screen.main.*
 @Composable
 @Preview
 fun MainScreen() {
+    val context = LocalContext.current
     val homeScreenState = rememberSaveable(
         stateSaver = Saver(
             save = { value ->
@@ -51,7 +58,31 @@ fun MainScreen() {
                             contentDescription = "Almer"
                         )
                     },
-//                actions: @Composable RowScope.() -> Unit = {},
+                    actions = {
+                        IconButton(onClick = {
+                            val url = "https://almer.io/123"
+                            val sendIntent: Intent = Intent().apply {
+                                action = Intent.ACTION_SEND
+                                putExtra(
+                                    Intent.EXTRA_TEXT,
+                                    "Call me on my Almer glasses at $url"
+                                )
+                                putExtra(
+                                    Intent.EXTRA_HTML_TEXT,
+                                    "Call me on my Almer glasses at <a href='$url'>$url</a>"
+                                )
+                                type = "text/plain"
+                            }
+
+                            val shareIntent = Intent.createChooser(sendIntent, null)
+                            startActivity(context, shareIntent, null)
+                        }) {
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_baseline_phone_24),
+                                contentDescription = "Call",
+                            )
+                        }
+                    },
 //                backgroundColor: Color = MaterialTheme.colors.primarySurface,
 //                contentColor: Color = contentColorFor(backgroundColor),
                     elevation = 10.dp

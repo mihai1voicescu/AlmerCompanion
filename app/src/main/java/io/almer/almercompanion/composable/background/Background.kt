@@ -35,7 +35,9 @@ fun Background(
 fun AlmerLogoBackground(
     content: @Composable BoxScope.() -> Unit
 ) {
-    Background(painterResource(id = R.drawable.symbol), content)
+    Background(
+        painterResource(id = R.drawable.symbol),
+        content)
 }
 
 @Composable
