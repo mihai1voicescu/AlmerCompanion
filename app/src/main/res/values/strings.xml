@@ -5,4 +5,7 @@
     <string name="navigation_item_remote">Remote</string>
     <string name="navigation_item_remote_assist">Remote Assistant</string>
     <string name="navigation_item_apps">Apps</string>
+    <string name="info_item_battery">Battery</string>
+    <string name="info_item_bluetooth">Bluetooth</string>
+    <string name="info_item_wifi">WiFi</string>
 </resources>

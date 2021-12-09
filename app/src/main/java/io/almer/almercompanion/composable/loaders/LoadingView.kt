@@ -17,7 +17,7 @@ fun LoadingView(
 ) {
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         PulsingImage(
-            painter = painterResource(id = R.drawable.logo),
+            painter = painterResource(id = R.drawable.symbol),
             durationMillis = 2000,
             modifier = modifier.fillMaxSize()
         )

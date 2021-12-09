@@ -4,7 +4,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -36,13 +35,13 @@ fun Background(
 fun AlmerLogoBackground(
     content: @Composable BoxScope.() -> Unit
 ) {
-    Background(painterResource(id = R.drawable.logo), content)
+    Background(painterResource(id = R.drawable.symbol), content)
 }
 
 @Composable
 @Preview
 private fun BackgroundPreview() {
-    Background(painter = painterResource(id = R.drawable.logo)) {
+    Background(painter = painterResource(id = R.drawable.symbol)) {
         Text("Almer")
     }
 }

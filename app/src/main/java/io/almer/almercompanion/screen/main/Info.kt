@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -40,7 +41,7 @@ object Info : MainScreenType(R.drawable.ic_round_info_24, R.string.navigation_it
 @Preview
 private fun Battery() {
     InfoItem(
-        name = "Battery",
+        name = stringResource(R.string.info_item_battery),
         icon = painterResource(id = R.drawable.ic_round_battery_std_24),
         value = "98%"
     )
@@ -52,7 +53,7 @@ private fun WiFi() {
 
     val nav = LocalNavHostController.current
     InfoItem(
-        name = "WiFi",
+        name = stringResource(R.string.info_item_wifi),
         icon = painterResource(id = R.drawable.ic_baseline_wifi_24),
         value = "Almer WiFi",
         onClick = {
@@ -75,7 +76,7 @@ private fun BluetoothView(
 ) {
     val nav = LocalNavHostController.current
     InfoItem(
-        name = "Bluetooth",
+        name = stringResource(R.string.info_item_bluetooth),
         icon = painterResource(
             id = if (connectedTo == null)
                 R.drawable.ic_baseline_bluetooth_disabled_24 else
