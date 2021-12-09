@@ -60,7 +60,7 @@ fun MainScreen() {
                     },
                     actions = {
                         IconButton(onClick = {
-                            val url = "https://almer.io/123"
+                            val url = "https://almer.io/?callId=123"
                             val sendIntent: Intent = Intent().apply {
                                 action = Intent.ACTION_SEND
                                 putExtra(
