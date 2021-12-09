@@ -15,6 +15,7 @@ import androidx.core.app.ActivityCompat.startIntentSenderForResult
 import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
+import io.almer.almercompanion.link.Link
 import java.util.*
 import java.util.regex.Pattern
 
@@ -25,6 +26,8 @@ class MainApp : Application() {
     val settings by lazy {
         AppSettings(this)
     }
+
+    val link = Link()
 
     val isWifiEnabled: Boolean
         get() {

@@ -1,32 +1,40 @@
 package io.almer.almercompanion.screen
 
-import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavController
+import io.almer.almercompanion.LocalNavHostController
+import io.almer.almercompanion.MainApp.Companion.mainApp
+import io.almer.almercompanion.composable.loaders.SubmitView
 import io.almer.almercompanion.composable.loaders.ViewLoader
 import io.almer.almercompanion.composable.select.ListSelector
 import io.almer.almercompanion.composable.text.BodyText
+import io.almer.almercompanion.link.model.BluetoothDevice
+import io.almer.almercompanion.safePopBackStack
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
-
-data class BluetoothDevice(
-    val name: String,
-    val isPaired: Boolean
-)
-
-private val mockData = listOf(
-    BluetoothDevice("Sony Headphones", true),
-    BluetoothDevice("Bose Headphones", false),
-)
+import kotlinx.coroutines.launch
 
 @Composable
 fun BluetoothScreen() {
+    val app = mainApp()
+    val navController = LocalNavHostController.current
+
     ViewLoader(
         stateLoader = {
             delay(200)
-            mockData
+            app.link.listBluetooth()
         }
     ) {
-        SelectBluethootListView(options = it, onSelect = {})
+        SubmitView { toggle ->
+            SelectBluethootListView(options = it, onSelect = {
+                toggle()
+                GlobalScope.launch {
+                    app.link.selectWiFi(it.uuid)
+                    toggle()
+                    navController.safePopBackStack()
+                }
+            })
+        }
     }
 }
 
