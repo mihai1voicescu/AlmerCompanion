@@ -8,7 +8,7 @@ import io.almer.almercompanion.composable.loaders.SubmitView
 import io.almer.almercompanion.composable.loaders.ViewLoader
 import io.almer.almercompanion.composable.select.ListSelector
 import io.almer.almercompanion.composable.text.BodyText
-import io.almer.almercompanion.link.model.BluetoothDevice
+import io.almer.companionshared.model.BluetoothDevice
 import io.almer.almercompanion.safePopBackStack
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
@@ -40,8 +40,8 @@ fun BluetoothScreen() {
 
 @Composable
 private fun SelectBluethootListView(
-    options: Collection<BluetoothDevice>,
-    onSelect: (device: BluetoothDevice) -> Unit
+    options: Collection<io.almer.companionshared.model.BluetoothDevice>,
+    onSelect: (device: io.almer.companionshared.model.BluetoothDevice) -> Unit
 ) {
     ListSelector(items = options, onSelect = onSelect) {
         BodyText(it.name)

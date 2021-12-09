@@ -9,7 +9,7 @@ import io.almer.almercompanion.composable.loaders.SubmitView
 import io.almer.almercompanion.composable.loaders.ViewLoader
 import io.almer.almercompanion.composable.select.ListSelector
 import io.almer.almercompanion.composable.text.BodyText
-import io.almer.almercompanion.link.model.WiFi
+import io.almer.companionshared.model.WiFi
 import io.almer.almercompanion.safePopBackStack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -52,8 +52,8 @@ private fun SelectWiFi() {
 
 @Composable
 private fun SelectWiFiListView(
-    options: Collection<WiFi>,
-    onSelect: (wifi: WiFi) -> Unit
+    options: Collection<io.almer.companionshared.model.WiFi>,
+    onSelect: (wifi: io.almer.companionshared.model.WiFi) -> Unit
 ) {
     ListSelector(items = options, onSelect = onSelect) {
         BodyText(

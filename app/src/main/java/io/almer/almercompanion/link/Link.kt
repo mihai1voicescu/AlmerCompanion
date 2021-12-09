@@ -1,7 +1,7 @@
 package io.almer.almercompanion.link
 
-import io.almer.almercompanion.link.model.BluetoothDevice
-import io.almer.almercompanion.link.model.WiFi
+import io.almer.companionshared.model.BluetoothDevice
+import io.almer.companionshared.model.WiFi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

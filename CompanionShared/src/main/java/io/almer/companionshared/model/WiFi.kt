@@ -1,4 +1,4 @@
-package io.almer.almercompanion.link.model
+package io.almer.companionshared.model
 
 data class WiFi(
     val name: String,
