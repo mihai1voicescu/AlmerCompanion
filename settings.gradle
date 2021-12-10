@@ -10,3 +10,5 @@ dependencyResolutionManagement {
 rootProject.name = "Almer Companion"
 include ':app'
 include ':CompanionShared'
+//include ':almerreceiver'
+include ':Commander'

@@ -27,7 +27,8 @@ class MainApp : Application() {
         AppSettings(this)
     }
 
-    val link = Link()
+    private lateinit var _link: Link
+    val link get() = _link
 
     val isWifiEnabled: Boolean
         get() {
@@ -82,6 +83,7 @@ class MainApp : Application() {
     override fun onCreate() {
         super.onCreate()
 
+        _link = Link(this)
 
         val deviceFilter: BluetoothDeviceFilter = BluetoothDeviceFilter.Builder()
             // Match only Bluetooth devices whose name matches the pattern.

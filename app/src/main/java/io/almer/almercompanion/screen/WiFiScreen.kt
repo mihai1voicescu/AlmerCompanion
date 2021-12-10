@@ -1,5 +1,6 @@
 package io.almer.almercompanion.screen
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.*
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavController
@@ -52,13 +53,34 @@ private fun SelectWiFi() {
 
 @Composable
 private fun SelectWiFiListView(
-    options: Collection<io.almer.companionshared.model.WiFi>,
-    onSelect: (wifi: io.almer.companionshared.model.WiFi) -> Unit
+    options: Collection<WiFi>,
+    onSelect: (wifi: WiFi) -> Unit
 ) {
-    ListSelector(items = options, onSelect = onSelect) {
-        BodyText(
-            text = it.name,
-        )
+    if (options.isEmpty()) {
+        BodyText(text = "No available WiFis")
+        return
+    }
+    val known = options.filter { it.isKnow }
+    val unknown = options.filter { !it.isKnow }
+
+    Column {
+        if (known.isNotEmpty()) {
+            BodyText(text = "Known")
+            ListSelector(items = known, onSelect = onSelect) {
+                BodyText(
+                    text = it.name,
+                )
+            }
+        }
+
+        if (unknown.isNotEmpty()) {
+            BodyText(text = "Unknown")
+            ListSelector(items = unknown, onSelect = onSelect) {
+                BodyText(
+                    text = it.name,
+                )
+            }
+        }
     }
 }
 

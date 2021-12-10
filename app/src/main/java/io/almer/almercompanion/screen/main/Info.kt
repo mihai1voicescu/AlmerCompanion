@@ -8,6 +8,9 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
@@ -17,6 +20,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import io.almer.almercompanion.LocalNavHostController
+import io.almer.almercompanion.MainApp.Companion.mainApp
 import io.almer.almercompanion.R
 import io.almer.almercompanion.screen.pathToBluetoothScreen
 import io.almer.almercompanion.screen.pathToWifiScreen
@@ -50,12 +54,14 @@ private fun Battery() {
 @Composable
 @Preview
 private fun WiFi() {
+    val app = mainApp()
 
+    val wifi by app.link.wifi.collectAsState()
     val nav = LocalNavHostController.current
     InfoItem(
         name = stringResource(R.string.info_item_wifi),
         icon = painterResource(id = R.drawable.ic_baseline_wifi_24),
-        value = "Almer WiFi",
+        value = wifi?.name ?: "Not connected",
         onClick = {
             nav.navigate(nav.pathToWifiScreen)
         }

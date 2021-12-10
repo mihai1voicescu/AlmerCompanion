@@ -1,27 +1,55 @@
 package io.almer.almercompanion.link
 
+import WiFiCommander
+import android.content.Context
+import android.net.wifi.WifiInfo
+import android.os.Build
 import io.almer.companionshared.model.BluetoothDevice
 import io.almer.companionshared.model.WiFi
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 
-class Link {
-    private val _wifi = MutableStateFlow<WiFi?>(null)
-    val wifi: StateFlow<WiFi?> = _wifi
+private fun WifiInfo.toWiFI(): WiFi {
+    val name: String = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        this.passpointProviderFriendlyName ?: this.ssid
+    } else {
+        // todo Get a name somehow
+        this.ssid
+    }
+
+    return WiFi(
+        name = name,
+        ssid = this.ssid,
+        strength = this.linkSpeed, // todo not OK
+    )
+}
+
+class Link(
+    context: Context,
+    scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
+) {
+    private val wifiCommander = WiFiCommander(context)
+
+    private val _wifi = MutableStateFlow(wifiCommander.wifi.value?.toWiFI())
+    val wifi = _wifi.asStateFlow()
 
     private val _bluetooth = MutableStateFlow<BluetoothDevice?>(null)
     val bluetooth: StateFlow<BluetoothDevice?> = _bluetooth
 
 
-    private val mockWifi = listOf(
-        WiFi("Wifi1", "ssid1", 90, true),
-        WiFi("Wifi2", "ssid2", 90, false),
-        WiFi("Wifi3", "ssid3", 80, true),
-        WiFi("Wifi4", "ssid4", 70, false),
-        WiFi("Wifi5", "ssid5", 60, true),
-        WiFi("Wifi6", "ssid6", 50, false),
-    ).map { it.ssid to it }.toMap()
+    init {
+        scope.launch {
+            scope.launch {
+                wifiCommander.wifi.collect {
+                    _wifi.emit(it?.toWiFI())
+                }
+            }
+            _wifi.emit(wifiCommander.wifi.value?.toWiFI())
+        }
+    }
 
     private val mockBluetooth = listOf(
         BluetoothDevice("Sony Headphones", true, "1"),
@@ -30,13 +58,12 @@ class Link {
 
 
     suspend fun listWiFi(): Collection<WiFi> {
-        delay(200)
-        return mockWifi.values
+        return wifiCommander.listWifi()
     }
 
     suspend fun selectWiFi(ssid: String) {
         delay(500)
-        _wifi.emit(mockWifi[ssid])
+//        _wifi.emit(mockWifi[ssid])
     }
 
     suspend fun listBluetooth(): Collection<BluetoothDevice> {
