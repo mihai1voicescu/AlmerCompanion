@@ -3,7 +3,8 @@ package io.almer.almercompanion.composable.select
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.LazyItemScope
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -25,33 +26,47 @@ fun <T> ListSelector(
 //        verticalArrangement = Arrangement.SpaceEvenly,
         content = {
             items.forEach {
-                item {
-                    Card(
-                        onClick = {
-                            onSelect(it)
-                        },
-                        modifier = Modifier
-                            .padding(horizontal = 10.dp, vertical = 2.dp)
-                            .fillMaxWidth(),
-                        role = Role.Button,
-
-                        border = BorderStroke(2.dp, Color.Gray),
-                        elevation = 8.dp,
-                        shape = MaterialTheme.shapes.medium,
-
-                        ) {
-                        Box(
-                            Modifier
-                                .padding(10.dp, 2.dp)
-                                .defaultMinSize(minHeight = 40.dp),
-                            contentAlignment = Alignment.CenterStart
-                        ) {
-                            inflater(it)
-                        }
-                    }
-                }
+                itemSelector(
+                    it,
+                    onSelect,
+                    inflater
+                )
             }
         })
+}
+
+@OptIn(ExperimentalMaterialApi::class)
+fun <T> LazyListScope.itemSelector(
+    element: T,
+    onSelect: (item: T) -> Unit,
+    inflater: @Composable (item: T) -> Unit
+) {
+    item {
+
+        Card(
+            onClick = {
+                onSelect(element)
+            },
+            modifier = Modifier
+                .padding(horizontal = 10.dp, vertical = 2.dp)
+                .fillMaxWidth(),
+            role = Role.Button,
+
+            border = BorderStroke(2.dp, Color.Gray),
+            elevation = 8.dp,
+            shape = MaterialTheme.shapes.medium,
+
+            ) {
+            Box(
+                Modifier
+                    .padding(10.dp, 2.dp)
+                    .defaultMinSize(minHeight = 40.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                inflater(element)
+            }
+        }
+    }
 }
 
 @Composable

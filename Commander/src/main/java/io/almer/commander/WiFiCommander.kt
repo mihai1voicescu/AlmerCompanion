@@ -1,16 +1,15 @@
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
-import android.net.ConnectivityManager
-import android.net.Network
-import android.net.NetworkCapabilities
 import android.net.wifi.ScanResult
 import android.net.wifi.WifiConfiguration
 import android.net.wifi.WifiManager
 import androidx.core.app.ActivityCompat
 import io.almer.companionshared.model.WiFi
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+
+import android.net.*
+import android.net.ConnectivityManager.NetworkCallback
+import kotlinx.coroutines.flow.*
 
 
 class WiFiCommander private constructor(
@@ -77,7 +76,7 @@ class WiFiCommander private constructor(
     val wifi = _wifi.asStateFlow()
 
     private val networkCallback = object :
-        ConnectivityManager.NetworkCallback() {
+        NetworkCallback() {
         override fun onAvailable(network: Network) {
             _wifi.value = wifiCommanderDelegate.getCurrentWifiInfo()
         }

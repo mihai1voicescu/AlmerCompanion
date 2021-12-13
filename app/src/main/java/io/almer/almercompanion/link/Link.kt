@@ -4,6 +4,7 @@ import WiFiCommander
 import android.content.Context
 import android.net.wifi.WifiInfo
 import android.os.Build
+import io.almer.commander.BluetoothCommander
 import io.almer.companionshared.model.BluetoothDevice
 import io.almer.companionshared.model.WiFi
 import kotlinx.coroutines.CoroutineScope
@@ -32,6 +33,7 @@ class Link(
     scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
 ) {
     private val wifiCommander = WiFiCommander(context)
+    private val bluetoothCommander = BluetoothCommander(context)
 
     private val _wifi = MutableStateFlow(wifiCommander.wifi.value?.toWiFI())
     val wifi = _wifi.asStateFlow()
@@ -51,12 +53,6 @@ class Link(
         }
     }
 
-    private val mockBluetooth = listOf(
-        BluetoothDevice("Sony Headphones", true, "1"),
-        BluetoothDevice("Bose Headphones", false, "2"),
-    ).map { it.uuid to it }.toMap()
-
-
     suspend fun listWiFi(): Collection<WiFi> {
         return wifiCommander.listWifi()
     }
@@ -66,13 +62,16 @@ class Link(
 //        _wifi.emit(mockWifi[ssid])
     }
 
-    suspend fun listBluetooth(): Collection<BluetoothDevice> {
-        delay(200)
-        return mockBluetooth.values
+    suspend fun pairedDevices(): Collection<BluetoothDevice> {
+        return bluetoothCommander.getBondedDevices()
+    }
+
+    fun scanBluetooth(): Flow<BluetoothDevice> {
+        return bluetoothCommander.scanDevices()
     }
 
     suspend fun selectBluetooth(uuid: String) {
         delay(500)
-        _bluetooth.emit(mockBluetooth[uuid])
+//        _bluetooth.emit(mockBluetooth[uuid])
     }
 }
