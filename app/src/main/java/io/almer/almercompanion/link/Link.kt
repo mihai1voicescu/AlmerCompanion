@@ -33,7 +33,7 @@ class Link(
     scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
 ) {
     private val wifiCommander = WiFiCommander(context)
-    private val bluetoothCommander = BluetoothCommander(context)
+     val bluetoothCommander = BluetoothCommander(context)
 
     private val _wifi = MutableStateFlow(wifiCommander.wifi.value?.toWiFI())
     val wifi = _wifi.asStateFlow()
@@ -70,8 +70,7 @@ class Link(
         return bluetoothCommander.scanDevices()
     }
 
-    suspend fun selectBluetooth(uuid: String) {
-        delay(500)
-//        _bluetooth.emit(mockBluetooth[uuid])
+    suspend fun selectBluetooth(name: String) {
+        bluetoothCommander.selectDevice(name)
     }
 }

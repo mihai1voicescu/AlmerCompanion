@@ -72,8 +72,11 @@ private fun WiFi() {
 @Composable
 @Preview
 private fun Bluetooth() {
+    val app = mainApp()
 
-    BluetoothView("Sony Headphones")
+    val headset by app.link.bluetoothCommander.headset.collectAsState()
+
+    BluetoothView(headset?.connectedDevices?.firstOrNull()?.name ?: "Not connected")
 }
 
 @Composable

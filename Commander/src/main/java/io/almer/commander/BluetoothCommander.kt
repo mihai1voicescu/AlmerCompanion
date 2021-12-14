@@ -10,17 +10,14 @@ import android.content.IntentFilter
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.onCompletion
 import java.util.concurrent.atomic.AtomicReference
 import android.util.Log
 
 import android.bluetooth.BluetoothHeadset
 import android.bluetooth.BluetoothProfile.ServiceListener
-import io.almer.companionshared.model.oneshot
 import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.flow.buffer
+import kotlinx.coroutines.flow.*
+import java.lang.reflect.Method
 
 
 typealias BluetoothDeviceModel = io.almer.companionshared.model.BluetoothDevice
@@ -36,13 +33,56 @@ const val TAG = "BluetoothCommander"
 
 class BluetoothCommander(
     val context: Context
-) {
+) : AutoCloseable {
 
     val bluetoothAdapter =
         BluetoothAdapter.getDefaultAdapter() ?: error("Device does not support Bluetooth")
 
     val isBluetoothOn = bluetoothAdapter.isEnabled
 
+    private val _headset = MutableStateFlow<BluetoothHeadset?>(null)
+    val headset = _headset.asStateFlow()
+
+    private val mProfileListener = object : ServiceListener {
+        override fun onServiceConnected(profile: Int, proxy: BluetoothProfile) {
+            if (profile == BluetoothProfile.HEADSET) {
+                val mBluetoothHeadset = proxy as BluetoothHeadset
+                _headset.value = mBluetoothHeadset
+            }
+        }
+
+        override fun onServiceDisconnected(profile: Int) {
+            if (profile == BluetoothProfile.HEADSET) {
+                Log.d(TAG, "[Bluetooth] Headset disconnected")
+            }
+        }
+    }
+
+    private val mReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val action: String = intent?.action ?: return
+
+            if (BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED == action) {
+                scanHeadset()
+            }
+        }
+    }
+
+
+    init {
+        scanHeadset()
+        context.registerReceiver(mReceiver,
+            IntentFilter(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED)
+//            Not needed
+//                .apply {
+//                    addAction(BluetoothAdapter.ACTION_STATE_CHANGED)
+//                }
+        )
+    }
+
+    private fun scanHeadset() {
+        bluetoothAdapter.getProfileProxy(context, mProfileListener, BluetoothProfile.HEADSET)
+    }
 
     suspend fun getBondedDevices(): Collection<BluetoothDeviceModel> {
         return bluetoothAdapter.bondedDevices.map(BluetoothDevice::toBluetoothDeviceModel)
@@ -88,27 +128,25 @@ class BluetoothCommander(
     }
 
 
-    suspend fun connectedHeadset(): BluetoothDevice {
-        val headset: BluetoothHeadset = oneshot {
-            val mProfileListener = object : ServiceListener {
-                override fun onServiceConnected(profile: Int, proxy: BluetoothProfile) {
-                    if (profile == BluetoothProfile.HEADSET) {
-                        val mBluetoothHeadset = proxy as BluetoothHeadset
-                        send(mBluetoothHeadset)
-                    }
-                }
+    fun selectDevice(name: String): Boolean {
+        /*
+         * Unfortunately this requires access to non-public API
+         *
+         * Method is here https://cs.android.com/android/platform/superproject/+/master:frameworks/base/core/java/android/bluetooth/BluetoothHeadset.java;l=480?q=BluetoothHeadse&ss=android%2Fplatform%2Fsuperproject
+         */
+        val headset = headset.value ?: return false
+        val method: Method = headset.javaClass.getMethod("connect", BluetoothDevice::class.java)
 
-                override fun onServiceDisconnected(profile: Int) {
-                    if (profile == BluetoothProfile.HEADSET) {
-                        Log.d(TAG, "[Bluetooth] Headset disconnected")
-                    }
-                }
-            }
+        val device = bluetoothAdapter.bondedDevices.first {
+            it.name == name
+        } ?: return false
 
-            bluetoothAdapter.getProfileProxy(context, mProfileListener, BluetoothProfile.HEADSET)
-        }
+        method.invoke(headset, device)
 
-        return headset.connectedDevices.first()
+        return true
     }
 
+    override fun close() {
+        context.unregisterReceiver(mReceiver)
+    }
 }

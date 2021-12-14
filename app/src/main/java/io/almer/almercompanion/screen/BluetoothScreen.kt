@@ -51,7 +51,7 @@ fun BluetoothScreen() {
 
     fun onSelect(device: BluetoothDevice, toggle: () -> Unit) {
         GlobalScope.launch {
-            app.link.selectWiFi("TODO")
+            app.link.selectBluetooth(device.name)
             toggle()
             navController.safePopBackStack()
         }
