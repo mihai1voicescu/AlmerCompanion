@@ -57,9 +57,8 @@ class Link(
         return wifiCommander.listWifi()
     }
 
-    suspend fun selectWiFi(ssid: String) {
-        delay(500)
-//        _wifi.emit(mockWifi[ssid])
+    suspend fun selectWiFi(networkId: Int) {
+        return wifiCommander.setWifi(networkId)
     }
 
     suspend fun pairedDevices(): Collection<BluetoothDevice> {

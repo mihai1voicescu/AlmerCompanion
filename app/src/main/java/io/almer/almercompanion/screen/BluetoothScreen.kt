@@ -7,13 +7,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import io.almer.almercompanion.LocalNavHostController
 import io.almer.almercompanion.MainApp.Companion.mainApp
+import io.almer.almercompanion.R
 import io.almer.almercompanion.composable.loaders.SubmitView
 import io.almer.almercompanion.composable.loaders.ViewLoader
 import io.almer.almercompanion.composable.navigation.BackButton
+import io.almer.almercompanion.composable.navigation.ReturnableScreen
 import io.almer.almercompanion.composable.select.itemSelector
 import io.almer.almercompanion.composable.text.BodyText
 import io.almer.almercompanion.safePopBackStack
@@ -50,35 +53,30 @@ fun BluetoothScreen() {
     }
 
     fun onSelect(device: BluetoothDevice, toggle: () -> Unit) {
-        GlobalScope.launch {
+        scope.launch {
             app.link.selectBluetooth(device.name)
             toggle()
             navController.safePopBackStack()
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(text = "Bluetooth") },
-                navigationIcon = { BackButton() },
-                actions = {
-                    Button(onClick = {
-                        if (scanningJob != null) {
-                            stopScan()
-                        } else {
-                            startScan()
-                        }
-                    }) {
-                        if (scanningJob != null) {
-                            Text(text = "Stop")
-                        } else {
-                            Text(text = "Scan")
-                        }
-                    }
-                },
-            )
-        },
+    ReturnableScreen(
+        title = stringResource(R.string.info_item_bluetooth),
+        actions = {
+            Button(onClick = {
+                if (scanningJob != null) {
+                    stopScan()
+                } else {
+                    startScan()
+                }
+            }) {
+                if (scanningJob != null) {
+                    Text(text = "Stop")
+                } else {
+                    Text(text = "Scan")
+                }
+            }
+        }
     ) {
         ViewLoader(
             stateLoader = {
@@ -111,7 +109,7 @@ fun BluetoothScreen() {
                             BodyText(it.name)
                         }
                     }
-                    item { Divider(Modifier.padding(vertical = 10.dp), thickness = 3.dp) }
+                    item { Divider(Modifier.padding(top = 20.dp), thickness = 3.dp) }
                     stickyHeader {
                         Card(
                             modifier = Modifier

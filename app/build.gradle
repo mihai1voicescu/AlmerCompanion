@@ -80,5 +80,7 @@ dependencies {
 
     implementation "com.google.accompanist:accompanist-permissions:0.21.4-beta"
 
+    implementation 'com.jakewharton.timber:timber:5.0.1'
+
 //    implementation 'com.github.Gurupreet:FontAwesomeCompose:1.0.1-alpha01'
 }

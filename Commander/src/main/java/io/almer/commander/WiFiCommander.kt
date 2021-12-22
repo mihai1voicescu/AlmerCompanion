@@ -9,8 +9,12 @@ import io.almer.companionshared.model.WiFi
 
 import android.net.*
 import android.net.ConnectivityManager.NetworkCallback
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import timber.log.Timber
+import android.R.attr.name
 
+fun Boolean.successString(): String = if (this) "successful" else "unsuccessful"
 
 class WiFiCommander private constructor(
     val context: Context,
@@ -27,8 +31,7 @@ class WiFiCommander private constructor(
     }
 
 
-    suspend fun listWifi(): List<WiFi> {
-        val list = scanWifi()
+    private fun configuredNetworks(): MutableList<WifiConfiguration> {
         if (ActivityCompat.checkSelfPermission(
                 context,
                 Manifest.permission.ACCESS_FINE_LOCATION
@@ -43,7 +46,14 @@ class WiFiCommander private constructor(
             // for ActivityCompat#requestPermissions for more details.
             error("No permission")
         }
-        val known = wifiManager.configuredNetworks.associateBy { it.SSID }
+        return wifiManager.configuredNetworks!!
+    }
+
+    suspend fun listWifi(): List<WiFi> {
+        val list = scanWifi()
+
+        val known = configuredNetworks().associateBy { it.SSID.trim('"') }
+
         return list.map {
             WiFi(
                 it.SSID,
@@ -138,10 +148,34 @@ class WiFiCommander private constructor(
         wifiManager.removeNetwork(networkId)
     }
 
+    private fun forgetAll() {
+        val list = configuredNetworks()
+        for (i in list) {
+            val isRemoved = wifiManager.removeNetwork(i.networkId)
+            Timber.d("Wifi %s removal was %s", i.SSID, isRemoved.successString())
+            wifiManager.saveConfiguration()
+        }
+    }
 
-    fun setWifi(networkId: Int) {
-        wifiManager.disconnect()
-        wifiManager.enableNetwork(networkId, true)
-        wifiManager.reconnect()
+    fun disableWifi(networkId: Int) {
+        val isDisabled = wifiManager.disableNetwork(networkId)
+        Timber.d("Wifi %s disabling was %s", networkId, isDisabled.successString())
+    }
+
+    suspend fun setWifi(networkId: Int) {
+//        forgetAll()
+
+        coroutineScope {
+            wifi.value?.let { disableWifi(it.networkId) }
+
+            val hasReset = async {
+                wifi.takeWhile { it == null }.collect()
+            }
+            wifiManager.disconnect()
+            hasReset.await()
+
+            wifiManager.enableNetwork(networkId, true)
+            wifiManager.reconnect()
+        }
     }
 }

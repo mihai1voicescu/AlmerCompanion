@@ -16,6 +16,7 @@ import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import io.almer.almercompanion.link.Link
+import timber.log.Timber
 import java.util.*
 import java.util.regex.Pattern
 
@@ -82,6 +83,8 @@ class MainApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+
+        Timber.plant(Timber.DebugTree())
 
         _link = Link(this)
 
