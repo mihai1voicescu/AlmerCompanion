@@ -4,6 +4,7 @@ import WiFiCommander
 import android.content.Context
 import android.net.wifi.WifiInfo
 import android.os.Build
+import io.almer.almercompanion.screen.WifiConnectionInfo
 import io.almer.commander.BluetoothCommander
 import io.almer.companionshared.model.BluetoothDevice
 import io.almer.companionshared.model.WiFi
@@ -33,7 +34,7 @@ class Link(
     scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
 ) {
     private val wifiCommander = WiFiCommander(context)
-     val bluetoothCommander = BluetoothCommander(context)
+    val bluetoothCommander = BluetoothCommander(context)
 
     private val _wifi = MutableStateFlow(wifiCommander.wifi.value?.toWiFI())
     val wifi = _wifi.asStateFlow()
@@ -59,6 +60,18 @@ class Link(
 
     suspend fun selectWiFi(networkId: Int) {
         return wifiCommander.setWifi(networkId)
+    }
+
+    suspend fun forgetWiFi(networkId: Int) {
+        return wifiCommander.forgetWifi(networkId)
+    }
+
+    suspend fun connectToWifi(wifiInfo: WiFi, connectionInfo: WifiConnectionInfo): String? {
+        val wifi = wifiCommander.learnWifiWPA(wifiInfo.ssid, connectionInfo.password)
+
+        wifiCommander.setWifi(wifi)
+
+        return null
     }
 
     suspend fun pairedDevices(): Collection<BluetoothDevice> {
