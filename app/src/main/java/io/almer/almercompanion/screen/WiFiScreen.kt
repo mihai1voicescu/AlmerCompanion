@@ -93,6 +93,7 @@ private fun SelectWiFi() {
                         it.filter { wifi.ssid != it.ssid }.toCollection(wifis)
                     } else {
                         wifis.removeIf {
+                            // todo bug
                             wifi.ssid != it.ssid
                         }
                     }

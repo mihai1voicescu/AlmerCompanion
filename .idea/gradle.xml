@@ -14,6 +14,7 @@
             <option value="$PROJECT_DIR$/Commander" />
             <option value="$PROJECT_DIR$/CompanionShared" />
             <option value="$PROJECT_DIR$/app" />
+            <option value="$PROJECT_DIR$/comanderdebug" />
           </set>
         </option>
         <option name="resolveModulePerSourceSet" value="false" />
