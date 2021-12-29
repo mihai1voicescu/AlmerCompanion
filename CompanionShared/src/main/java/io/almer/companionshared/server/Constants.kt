@@ -11,7 +11,8 @@ import java.util.*
  * The official specification can be found here:
  * [://www.bluetooth.org/en-us/specification/assigned-numbers/service-discovery][https]
  */
-val SERVICE_UUID: UUID = UUID.fromString("0000b81d-0000-1000-8000-00805f9b34fb")
+//val SERVICE_UUID: UUID = UUID.fromString("0000b81d-0000-1000-8000-00805f9b34fb")
+val SERVICE_UUID: UUID = UUID.fromString("ff578b5f-68ba-4843-9a89-50f1822b27dc")
 
 /**
  * UUID for the message
