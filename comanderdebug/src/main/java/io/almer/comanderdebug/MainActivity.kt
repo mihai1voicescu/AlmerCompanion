@@ -18,6 +18,7 @@ import com.google.accompanist.permissions.PermissionsRequired
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import io.almer.comanderdebug.MainActivity.Companion.mainActivity
 import io.almer.comanderdebug.ui.theme.AlmerCompanionTheme
+import io.almer.companionshared.server.ChatConnector
 import io.almer.companionshared.server.ChatServer
 import io.almer.companionshared.server.DeviceScan
 import kotlinx.coroutines.Dispatchers
@@ -31,12 +32,19 @@ class MainActivity : ComponentActivity() {
 
     val deviceScan = DeviceScan(this)
     lateinit var chatServer: ChatServer
+    lateinit var chatConnector: ChatConnector
+
+    override fun onDestroy() {
+        super.onDestroy()
+        chatServer.close()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         Timber.plant(Timber.DebugTree())
         chatServer = ChatServer(this)
+        chatConnector = ChatConnector(this)
 
         setContent {
             AlmerCompanionTheme {
@@ -109,12 +117,12 @@ fun Main() {
                 item {
                     Button(onClick = {
                         scope.launch {
-                            act.chatServer.setCurrentChatConnection(it.value)
+                            act.chatConnector.setCurrentChatConnection(it.value)
 
                             withContext(Dispatchers.Main) {
                                 while (true) {
                                     delay(2000)
-                                    act.chatServer.sendMessage("Hello")
+                                    act.chatConnector.sendMessage("Hello")
                                 }
                             }
 
