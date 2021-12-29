@@ -7,7 +7,6 @@ import android.bluetooth.le.AdvertiseSettings
 import android.bluetooth.le.BluetoothLeAdvertiser
 import android.content.Context
 import android.os.ParcelUuid
-import android.util.Log
 import com.juul.kable.*
 import com.juul.kable.logs.Logging
 import kotlinx.coroutines.*
@@ -131,46 +130,6 @@ class ChatServer(
 
         Timber.i("Successfully selected current peripheral: %s", _currentPeripheral.value)
     }
-
-//    private fun connectToChatDevice(device: BluetoothDevice) {
-//        gattClientCallback = GattClientCallback()
-//        gattClient = device.connectGatt(context, false, gattClientCallback)
-//    }
-
-//    suspend fun scanner() {
-//        val adv = Scanner {
-//            this.services = listOf(
-//                SERVICE_UUID
-//            )
-//        }
-//            .advertisements
-//            .first()
-//
-//        Timber.i("%s", adv)
-//
-//        val job = CoroutineScope(Dispatchers.Default).launch {
-//            val peripheral = peripheral(adv) {
-//                this.logging {
-//                    level = Logging.Level.Events
-//                }
-//            }
-//
-//            launch {
-//                peripheral.state.collect {
-//                    Timber.i("State changed to %s", it)
-//                }
-//            }
-//
-//            peripheral.connect()
-//
-//            val char = characteristicOf(
-//                SERVICE_UUID.toString(),
-//                MESSAGE_UUID.toString()
-//            )
-//
-//            peripheral.write(char, "test".toByteArray(Charsets.UTF_8), WriteType.WithResponse)
-//        }
-//    }
 
     suspend fun sendMessage(message: String): Boolean {
         Timber.d("Send a message")
