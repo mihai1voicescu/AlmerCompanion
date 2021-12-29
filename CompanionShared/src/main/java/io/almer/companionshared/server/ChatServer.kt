@@ -70,14 +70,9 @@ class ChatServer(
 
     private val _deviceConnection = Channel<DeviceConnectionState?>(100)
 
-    val deviceConnection get() = _deviceConnection.receiveAsFlow()
     private var gatt: BluetoothGatt? = null
 
-        private var messageCharacteristic: Characteristic? = null
-//    private val messageCharacteristic = object : Characteristic {
-//        override val characteristicUuid: Uuid = MESSAGE_UUID
-//        override val serviceUuid: Uuid = SERVICE_UUID
-//    }
+    private var messageCharacteristic: Characteristic? = null
 
 
     fun stopServer() {
@@ -242,7 +237,8 @@ class ChatServer(
             super.onConnectionStateChange(device, status, newState)
             val isSuccess = status == BluetoothGatt.GATT_SUCCESS
             val isConnected = newState == BluetoothProfile.STATE_CONNECTED
-            Timber.d("onConnectionStateChange: Server $device ${device.name} success: $isSuccess connected: $isConnected"
+            Timber.d(
+                "onConnectionStateChange: Server $device ${device.name} success: $isSuccess connected: $isConnected"
             )
             if (isSuccess && isConnected) {
                 _connectionRequest.trySendBlocking(device)
@@ -285,7 +281,8 @@ class ChatServer(
             super.onConnectionStateChange(gatt, status, newState)
             val isSuccess = status == BluetoothGatt.GATT_SUCCESS
             val isConnected = newState == BluetoothProfile.STATE_CONNECTED
-            Timber.d("onConnectionStateChange: Client $gatt  success: $isSuccess connected: $isConnected"
+            Timber.d(
+                "onConnectionStateChange: Client $gatt  success: $isSuccess connected: $isConnected"
             )
             // try to send a message to the other device as a test
             if (isSuccess && isConnected) {
