@@ -173,7 +173,7 @@ class ChatServer(
 //    }
 
     suspend fun sendMessage(message: String): Boolean {
-        Log.d(TAG, "Send a message")
+        Timber.d("Send a message")
 
         currentPeripheral.value?.let { periferal ->
             scope.launch {
@@ -220,7 +220,7 @@ class ChatServer(
      */
     private fun startAdvertisement() {
         advertiser = adapter.bluetoothLeAdvertiser
-        Log.d(TAG, "startAdvertisement: with advertiser $advertiser")
+        Timber.d("startAdvertisement: with advertiser $advertiser")
 
         if (advertiseCallback == null) {
             advertiseCallback = DeviceAdvertiseCallback()
@@ -233,7 +233,7 @@ class ChatServer(
      * Stops BLE Advertising.
      */
     private fun stopAdvertising() {
-        Log.d(TAG, "Stopping Advertising with advertiser $advertiser")
+        Timber.d("Stopping Advertising with advertiser $advertiser")
         advertiser?.stopAdvertising(advertiseCallback)
         advertiseCallback = null
     }
@@ -283,9 +283,7 @@ class ChatServer(
             super.onConnectionStateChange(device, status, newState)
             val isSuccess = status == BluetoothGatt.GATT_SUCCESS
             val isConnected = newState == BluetoothProfile.STATE_CONNECTED
-            Log.d(
-                TAG,
-                "onConnectionStateChange: Server $device ${device.name} success: $isSuccess connected: $isConnected"
+            Timber.d("onConnectionStateChange: Server $device ${device.name} success: $isSuccess connected: $isConnected"
             )
             if (isSuccess && isConnected) {
                 _connectionRequest.trySendBlocking(device)
@@ -315,7 +313,7 @@ class ChatServer(
             if (characteristic.uuid == MESSAGE_UUID) {
                 gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null)
                 val message = value?.toString(Charsets.UTF_8)
-                Log.d(TAG, "onCharacteristicWriteRequest: Have message: \"$message\"")
+                Timber.d("onCharacteristicWriteRequest: Have message: \"$message\"")
                 message?.let {
                     _messages.value = _messages.value + message
                 }
@@ -328,9 +326,7 @@ class ChatServer(
             super.onConnectionStateChange(gatt, status, newState)
             val isSuccess = status == BluetoothGatt.GATT_SUCCESS
             val isConnected = newState == BluetoothProfile.STATE_CONNECTED
-            Log.d(
-                TAG,
-                "onConnectionStateChange: Client $gatt  success: $isSuccess connected: $isConnected"
+            Timber.d("onConnectionStateChange: Client $gatt  success: $isSuccess connected: $isConnected"
             )
             // try to send a message to the other device as a test
             if (isSuccess && isConnected) {
@@ -342,7 +338,7 @@ class ChatServer(
         override fun onServicesDiscovered(discoveredGatt: BluetoothGatt, status: Int) {
             super.onServicesDiscovered(discoveredGatt, status)
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                Log.d(TAG, "onServicesDiscovered: Have gatt $discoveredGatt")
+                Timber.d("onServicesDiscovered: Have gatt $discoveredGatt")
                 gatt = discoveredGatt
                 val service = discoveredGatt.getService(SERVICE_UUID)
                 Timber.i("Found the good service")
@@ -360,13 +356,13 @@ class ChatServer(
             super.onStartFailure(errorCode)
             // Send error state to display
             val errorMessage = "Advertise failed with error: $errorCode"
-            Log.d(TAG, "Advertising failed")
+            Timber.d("Advertising failed")
             //_viewState.value = DeviceScanViewState.Error(errorMessage)
         }
 
         override fun onStartSuccess(settingsInEffect: AdvertiseSettings) {
             super.onStartSuccess(settingsInEffect)
-            Log.d(TAG, "Advertising successfully started")
+            Timber.d("Advertising successfully started")
         }
     }
 }
