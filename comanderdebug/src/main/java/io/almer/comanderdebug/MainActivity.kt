@@ -95,8 +95,8 @@ fun Main() {
     Column {
         Button(onClick = {
             scope.launch {
-                act.chatServer.scanner()
-                act.deviceScan.scan(20_000)
+//                act.chatServer.scanner()
+                act.deviceScan.scan(4_000)
             }
         }) {
             Text("Scan")

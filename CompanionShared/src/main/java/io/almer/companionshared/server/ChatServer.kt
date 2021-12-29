@@ -8,11 +8,8 @@ import android.bluetooth.le.BluetoothLeAdvertiser
 import android.content.Context
 import android.os.ParcelUuid
 import android.util.Log
-import com.juul.kable.Scanner
-import com.juul.kable.WriteType
-import com.juul.kable.characteristicOf
+import com.juul.kable.*
 import com.juul.kable.logs.Logging
-import com.juul.kable.peripheral
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.trySendBlocking
@@ -21,7 +18,10 @@ import timber.log.Timber
 
 private const val TAG = "ChatServer"
 
-class ChatServer(val context: Context) {
+class ChatServer(
+    val context: Context,
+    val scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
+) {
 
     private val bluetoothManager: BluetoothManager =
         context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
@@ -50,9 +50,6 @@ class ChatServer(val context: Context) {
     private var gattServer: BluetoothGattServer? = null
     private val gattServerCallback: BluetoothGattServerCallback = GattServerCallback()
 
-    private var gattClient: BluetoothGatt? = null
-    private var gattClientCallback: BluetoothGattCallback? = null
-
     init {
         if (!adapter.isEnabled) {
             error("Bluetooth adapter is not enabled")
@@ -69,13 +66,19 @@ class ChatServer(val context: Context) {
 
     // Properties for current chat device connection
 
-    private var _currentDevice = MutableStateFlow<BluetoothDevice?>(null)
-    val currentDevice = _currentDevice.asSharedFlow()
+    private var _currentPeripheral = MutableStateFlow<Peripheral?>(null)
+    val currentPeripheral = _currentPeripheral.asStateFlow()
+
     private val _deviceConnection = Channel<DeviceConnectionState?>(100)
 
     val deviceConnection get() = _deviceConnection.receiveAsFlow()
     private var gatt: BluetoothGatt? = null
-    private var messageCharacteristic: BluetoothGattCharacteristic? = null
+
+        private var messageCharacteristic: Characteristic? = null
+//    private val messageCharacteristic = object : Characteristic {
+//        override val characteristicUuid: Uuid = MESSAGE_UUID
+//        override val serviceUuid: Uuid = SERVICE_UUID
+//    }
 
 
     fun stopServer() {
@@ -92,70 +95,100 @@ class ChatServer(val context: Context) {
 //     */
 ////    fun getYourDeviceAddress(): String = bluetoothManager.adapter.address
 
-    fun setCurrentChatConnection(device: BluetoothDevice) {
-        _currentDevice.value = device
-        connectToChatDevice(device)
-    }
-
-    private fun connectToChatDevice(device: BluetoothDevice) {
-        gattClientCallback = GattClientCallback()
-        gattClient = device.connectGatt(context, false, gattClientCallback)
-    }
-
-    suspend fun scanner() {
-        val adv = Scanner {
-            this.services = listOf(
-                SERVICE_UUID
-            )
-        }
-            .advertisements
-            .first()
-
-        Timber.i("%s", adv)
-
-
-        val job = CoroutineScope(Dispatchers.Default).launch {
-            val peripheral = peripheral(adv) {
-                this.logging {
-                    level = Logging.Level.Events
-                }
+    suspend fun setCurrentChatConnection(device: BluetoothDevice) {
+        Timber.i("Peripheral: creating")
+        val peripheral = scope.peripheral(device) {
+            this.logging {
+                level = Logging.Level.Events
             }
-
-            launch {
-                peripheral.state.collect {
-                    Timber.i("State changed to %s", it)
-                }
+            this.onServicesDiscovered {
+                Timber.i("Successfully discovered services")
             }
-
-            peripheral.connect()
-
-            val char = characteristicOf(
-                SERVICE_UUID.toString(),
-                MESSAGE_UUID.toString()
-            )
-
-            peripheral.write(char, "test".toByteArray(Charsets.UTF_8), WriteType.WithResponse)
         }
+
+        peripheral.state.onEach {
+            Timber.i("Peripheral: state: %s", it)
+        }.launchIn(scope)
+
+        Timber.i("Peripheral: connecting")
+        peripheral.connect()
+        Timber.i("Peripheral: connected")
+
+        Timber.i("Peripheral: discover services")
+        val service = peripheral.services!!.first {
+            it.serviceUuid == SERVICE_UUID
+        }
+
+        Timber.i("Peripheral: discover char")
+        val char = service.characteristics.first {
+            it.characteristicUuid == MESSAGE_UUID
+        }
+
+        Timber.i("Peripheral: setting vars")
+        messageCharacteristic = char
+
+        _currentPeripheral.value = peripheral
+
+        Timber.i("Successfully selected current peripheral: %s", _currentPeripheral.value)
     }
+
+//    private fun connectToChatDevice(device: BluetoothDevice) {
+//        gattClientCallback = GattClientCallback()
+//        gattClient = device.connectGatt(context, false, gattClientCallback)
+//    }
+
+//    suspend fun scanner() {
+//        val adv = Scanner {
+//            this.services = listOf(
+//                SERVICE_UUID
+//            )
+//        }
+//            .advertisements
+//            .first()
+//
+//        Timber.i("%s", adv)
+//
+//        val job = CoroutineScope(Dispatchers.Default).launch {
+//            val peripheral = peripheral(adv) {
+//                this.logging {
+//                    level = Logging.Level.Events
+//                }
+//            }
+//
+//            launch {
+//                peripheral.state.collect {
+//                    Timber.i("State changed to %s", it)
+//                }
+//            }
+//
+//            peripheral.connect()
+//
+//            val char = characteristicOf(
+//                SERVICE_UUID.toString(),
+//                MESSAGE_UUID.toString()
+//            )
+//
+//            peripheral.write(char, "test".toByteArray(Charsets.UTF_8), WriteType.WithResponse)
+//        }
+//    }
 
     suspend fun sendMessage(message: String): Boolean {
         Log.d(TAG, "Send a message")
-        messageCharacteristic?.let { characteristic ->
-            characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
 
-            val messageBytes = message.toByteArray(Charsets.UTF_8)
-            characteristic.value = messageBytes
-            gatt?.let {
-                val success = it.writeCharacteristic(characteristic)
+        currentPeripheral.value?.let { periferal ->
+            scope.launch {
+                val messageBytes = message.toByteArray(Charsets.UTF_8)
+                periferal.write(
+                    messageCharacteristic!!,
+                    messageBytes,
+//                    writeType = WriteType.WithoutResponse
+                )
+//                _messages.value = _messages.value + message
+            }.join()
 
-                Log.d(TAG, "onServicesDiscovered: message send: $success")
-                if (success) {
-                    _messages.value = _messages.value + message
-                }
-            } ?: run {
-                Log.d(TAG, "sendMessage: no gatt connection to send a message with")
-            }
+            return true
         }
+
         return false
     }
 
@@ -312,7 +345,8 @@ class ChatServer(val context: Context) {
                 Log.d(TAG, "onServicesDiscovered: Have gatt $discoveredGatt")
                 gatt = discoveredGatt
                 val service = discoveredGatt.getService(SERVICE_UUID)
-                messageCharacteristic = service.getCharacteristic(MESSAGE_UUID)
+                Timber.i("Found the good service")
+//                messageCharacteristic = service.getCharacteristic(MESSAGE_UUID)
             }
         }
     }
