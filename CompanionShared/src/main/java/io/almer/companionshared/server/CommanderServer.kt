@@ -13,7 +13,7 @@ import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.flow.*
 import timber.log.Timber
 
-class ChatServer(
+class CommanderServer(
     val context: Context,
     val scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
 ) : AutoCloseable {

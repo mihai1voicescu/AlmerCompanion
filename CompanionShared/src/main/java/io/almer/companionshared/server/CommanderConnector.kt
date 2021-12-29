@@ -15,7 +15,7 @@ import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.flow.*
 import timber.log.Timber
 
-class ChatConnector(
+class CommanderConnector(
     val context: Context,
     val scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
 ) {

@@ -1,5 +1,8 @@
 package io.almer.companionshared.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class WiFi(
     val name: String,
     val ssid: String,

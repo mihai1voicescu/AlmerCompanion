@@ -1,7 +1,6 @@
 package io.almer.comanderdebug
 
 import android.Manifest
-import android.bluetooth.BluetoothDevice
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -18,8 +17,8 @@ import com.google.accompanist.permissions.PermissionsRequired
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import io.almer.comanderdebug.MainActivity.Companion.mainActivity
 import io.almer.comanderdebug.ui.theme.AlmerCompanionTheme
-import io.almer.companionshared.server.ChatConnector
-import io.almer.companionshared.server.ChatServer
+import io.almer.companionshared.server.CommanderConnector
+import io.almer.companionshared.server.CommanderServer
 import io.almer.companionshared.server.DeviceScan
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -31,20 +30,20 @@ import timber.log.Timber
 class MainActivity : ComponentActivity() {
 
     val deviceScan = DeviceScan(this)
-    lateinit var chatServer: ChatServer
-    lateinit var chatConnector: ChatConnector
+    lateinit var commanderServer: CommanderServer
+    lateinit var commanderConnector: CommanderConnector
 
     override fun onDestroy() {
         super.onDestroy()
-        chatServer.close()
+        commanderServer.close()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         Timber.plant(Timber.DebugTree())
-        chatServer = ChatServer(this)
-        chatConnector = ChatConnector(this)
+        commanderServer = CommanderServer(this)
+        commanderConnector = CommanderConnector(this)
 
         setContent {
             AlmerCompanionTheme {
@@ -98,7 +97,7 @@ fun Main() {
 
     val results by act.deviceScan.scanResults.collectAsState()
 
-    val messages by act.chatServer.messages.collectAsState()
+    val messages by act.commanderServer.messages.collectAsState()
 
     Column {
         Button(onClick = {
@@ -117,12 +116,12 @@ fun Main() {
                 item {
                     Button(onClick = {
                         scope.launch {
-                            act.chatConnector.setCurrentChatConnection(it.value)
+                            act.commanderConnector.setCurrentChatConnection(it.value)
 
                             withContext(Dispatchers.Main) {
                                 while (true) {
                                     delay(2000)
-                                    act.chatConnector.sendMessage("Hello")
+                                    act.commanderConnector.sendMessage("Hello")
                                 }
                             }
 
