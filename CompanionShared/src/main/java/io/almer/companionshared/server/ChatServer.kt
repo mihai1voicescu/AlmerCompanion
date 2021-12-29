@@ -15,8 +15,6 @@ import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.flow.*
 import timber.log.Timber
 
-private const val TAG = "ChatServer"
-
 class ChatServer(
     val context: Context,
     val scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
@@ -69,8 +67,6 @@ class ChatServer(
     val currentPeripheral = _currentPeripheral.asStateFlow()
 
     private val _deviceConnection = Channel<DeviceConnectionState?>(100)
-
-    private var gatt: BluetoothGatt? = null
 
     private var messageCharacteristic: Characteristic? = null
 
@@ -272,33 +268,6 @@ class ChatServer(
                 message?.let {
                     _messages.value = _messages.value + message
                 }
-            }
-        }
-    }
-
-    private inner class GattClientCallback : BluetoothGattCallback() {
-        override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
-            super.onConnectionStateChange(gatt, status, newState)
-            val isSuccess = status == BluetoothGatt.GATT_SUCCESS
-            val isConnected = newState == BluetoothProfile.STATE_CONNECTED
-            Timber.d(
-                "onConnectionStateChange: Client $gatt  success: $isSuccess connected: $isConnected"
-            )
-            // try to send a message to the other device as a test
-            if (isSuccess && isConnected) {
-                // discover services
-                gatt.discoverServices()
-            }
-        }
-
-        override fun onServicesDiscovered(discoveredGatt: BluetoothGatt, status: Int) {
-            super.onServicesDiscovered(discoveredGatt, status)
-            if (status == BluetoothGatt.GATT_SUCCESS) {
-                Timber.d("onServicesDiscovered: Have gatt $discoveredGatt")
-                gatt = discoveredGatt
-                val service = discoveredGatt.getService(SERVICE_UUID)
-                Timber.i("Found the good service")
-//                messageCharacteristic = service.getCharacteristic(MESSAGE_UUID)
             }
         }
     }
