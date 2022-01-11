@@ -17,8 +17,8 @@ import com.google.accompanist.permissions.PermissionsRequired
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import io.almer.comanderdebug.MainActivity.Companion.mainActivity
 import io.almer.comanderdebug.ui.theme.AlmerCompanionTheme
-import io.almer.companionshared.server.CommanderConnector
-import io.almer.companionshared.server.CommanderServer
+import io.almer.almercompanion.link.CommanderConnector
+import io.almer.commander.CommanderServer
 import io.almer.companionshared.server.DeviceScan
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -31,7 +31,7 @@ class MainActivity : ComponentActivity() {
 
     val deviceScan = DeviceScan(this)
     lateinit var commanderServer: CommanderServer
-    lateinit var commanderConnector: CommanderConnector
+    lateinit var commanderConnector: io.almer.almercompanion.link.CommanderConnector
 
     override fun onDestroy() {
         super.onDestroy()
@@ -43,7 +43,7 @@ class MainActivity : ComponentActivity() {
 
         Timber.plant(Timber.DebugTree())
         commanderServer = CommanderServer(this)
-        commanderConnector = CommanderConnector(this)
+        commanderConnector = io.almer.almercompanion.link.CommanderConnector(this)
 
         setContent {
             AlmerCompanionTheme {

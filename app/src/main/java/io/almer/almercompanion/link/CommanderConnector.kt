@@ -1,16 +1,12 @@
-package io.almer.companionshared.server
+package io.almer.almercompanion.link
 
 import android.bluetooth.*
-import android.bluetooth.le.AdvertiseCallback
-import android.bluetooth.le.AdvertiseData
-import android.bluetooth.le.AdvertiseSettings
-import android.bluetooth.le.BluetoothLeAdvertiser
 import android.content.Context
-import android.os.ParcelUuid
 import com.juul.kable.*
 import com.juul.kable.logs.Logging
+import io.almer.companionshared.server.MESSAGE_UUID
+import io.almer.companionshared.server.SERVICE_UUID
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.flow.*
 import timber.log.Timber

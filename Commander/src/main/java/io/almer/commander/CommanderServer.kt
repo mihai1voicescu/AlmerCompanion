@@ -1,5 +1,6 @@
-package io.almer.companionshared.server
+package io.almer.commander
 
+import WiFiCommander
 import android.bluetooth.*
 import android.bluetooth.le.AdvertiseCallback
 import android.bluetooth.le.AdvertiseData
@@ -7,17 +8,27 @@ import android.bluetooth.le.AdvertiseSettings
 import android.bluetooth.le.BluetoothLeAdvertiser
 import android.content.Context
 import android.os.ParcelUuid
+import io.almer.companionshared.server.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.flow.*
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.encodeToByteArray
+import kotlinx.serialization.protobuf.ProtoBuf
 import timber.log.Timber
+
+
+@OptIn(ExperimentalSerializationApi::class)
+inline fun <reified T> toGattSuccess(t: T) =
+    Pair(BluetoothGatt.GATT_SUCCESS, ProtoBuf.encodeToByteArray(t))
 
 class CommanderServer(
     val context: Context,
-    val scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
+    private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
 ) : AutoCloseable {
 
+    private val wifiCommander = WiFiCommander(context)
     private val bluetoothManager: BluetoothManager =
         context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
 
@@ -45,6 +56,11 @@ class CommanderServer(
     private var gattServer: BluetoothGattServer? = null
     private val gattServerCallback: BluetoothGattServerCallback = GattServerCallback()
 
+    private val characteristicCommandCatalog = setupCharacteristicCommandCatalog()
+
+    private val gattWriteRequestChannel = Channel<GattWriteRequest>(200)
+    private val gattReadRequestChannel = Channel<GattReadRequest>(200)
+
     init {
         if (!adapter.isEnabled) {
             error("Bluetooth adapter is not enabled")
@@ -54,7 +70,7 @@ class CommanderServer(
             context,
             gattServerCallback
         ).apply {
-            addService(setupGattService())
+            addService(characteristicCommandCatalog.service)
         }
         startAdvertisement()
     }
@@ -69,7 +85,7 @@ class CommanderServer(
     /**
      * Function to create the GATT Server with the required characteristics and descriptors
      */
-    private fun setupGattService(): BluetoothGattService {
+    private fun setupCharacteristicCommandCatalog(): CharacteristicCommandCatalog {
         // Setup gatt service
         val service = BluetoothGattService(SERVICE_UUID, BluetoothGattService.SERVICE_TYPE_PRIMARY)
         // need to ensure that the property is writable and has the write permission
@@ -86,7 +102,7 @@ class CommanderServer(
         )
         service.addCharacteristic(confirmCharacteristic)
 
-        return service
+        return CharacteristicCommandCatalog(service)
     }
 
     /**
@@ -149,6 +165,23 @@ class CommanderServer(
             .build()
     }
 
+    data class GattWriteRequest(
+        val device: BluetoothDevice,
+        val requestId: Int,
+        val characteristic: BluetoothGattCharacteristic,
+        val preparedWrite: Boolean,
+        val responseNeeded: Boolean,
+        val offset: Int,
+        val value: ByteArray?
+    )
+
+    data class GattReadRequest(
+        val device: BluetoothDevice?,
+        val requestId: Int,
+        val offset: Int,
+        val characteristic: BluetoothGattCharacteristic?
+    )
+
     /**
      * Custom callback for the Gatt Server this device implements
      */
@@ -185,15 +218,70 @@ class CommanderServer(
                 offset,
                 value
             )
-            if (characteristic.uuid == MESSAGE_UUID) {
-                gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null)
-                val message = value?.toString(Charsets.UTF_8)
-                Timber.d("onCharacteristicWriteRequest: Have message: \"$message\"")
-                message?.let {
-                    _messages.value = _messages.value + message
+
+            when (characteristic.uuid) {
+                MESSAGE_UUID -> {
+                    gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null)
+                    val message = value?.toString(Charsets.UTF_8)
+                    Timber.d("onCharacteristicWriteRequest: Have message: \"$message\"")
+                    message?.let {
+                        _messages.value = _messages.value + message
+                    }
+                }
+
+                else -> {
+                    gattWriteRequestChannel.trySendBlocking(
+                        GattWriteRequest(
+                            device,
+                            requestId,
+                            characteristic,
+                            preparedWrite,
+                            responseNeeded,
+                            offset,
+                            value
+                        )
+                    )
                 }
             }
         }
+
+
+        override fun onCharacteristicReadRequest(
+            device: BluetoothDevice?,
+            requestId: Int,
+            offset: Int,
+            characteristic: BluetoothGattCharacteristic?
+        ) {
+            super.onCharacteristicReadRequest(device, requestId, offset, characteristic)
+        }
+    }
+
+    init {
+        gattWriteRequestChannel.receiveAsFlow().onEach { request ->
+            val (result, value) = when (request.characteristic.uuid) {
+                CommandsUUID.ListWiFi -> {
+                    handleListWifi()
+                }
+                else -> error("Could not identify request UUID")
+            }
+            gattServer?.sendResponse(request.device, request.requestId, result, 0, value)
+        }.launchIn(scope)
+
+        gattReadRequestChannel.receiveAsFlow().onEach { request ->
+            val (result, value) = when (request.characteristic?.uuid) {
+                CommandsUUID.ListWiFi -> {
+                    handleListWifi()
+                }
+                else -> error("Could not identify request UUID")
+            }
+            gattServer?.sendResponse(request.device, request.requestId, result, 0, value)
+        }.launchIn(scope)
+    }
+
+    private suspend fun handleListWifi(): Pair<Int, ByteArray> {
+        val wifis = wifiCommander.listWifi()
+
+        return toGattSuccess(wifis)
     }
 
     /**

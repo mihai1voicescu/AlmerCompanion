@@ -3,19 +3,23 @@ package io.almer.almercompanion
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.material.Card
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.*
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.google.accompanist.permissions.*
+import com.juul.kable.Advertisement
+import com.juul.kable.peripheral
 import io.almer.almercompanion.MainApp.Companion.mainApp
+import io.almer.almercompanion.composable.select.ListSelector
+import io.almer.almercompanion.link.Link
 import io.almer.almercompanion.screen.*
 import io.almer.almercompanion.ui.theme.AlmerCompanionTheme
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,6 +61,31 @@ fun DebugGuard() {
         permissionsNotAvailableContent = {
             Text("Device does not have the required permissions")
         }) {
+        LinkEnsure()
+    }
+}
+
+
+@Composable
+fun LinkEnsure() {
+    val app = mainApp()
+
+    val scope = rememberCoroutineScope()
+    val link by app.linkState.collectAsState()
+
+    if (link == null) {
+        val advertisers = remember {
+            mutableStateListOf<Advertisement>()
+        }
+
+        ListSelector(items = advertisers, onSelect = {
+            scope.launch {
+                app.selectDevice(it)
+            }
+        }) {
+            Text(it.name ?: it.address)
+        }
+    } else {
         NavigationBootstrap()
     }
 }

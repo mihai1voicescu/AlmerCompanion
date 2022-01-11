@@ -9,13 +9,25 @@ import android.content.IntentSender
 import android.net.ConnectivityManager
 import android.net.NetworkInfo
 import android.os.ParcelUuid
+import androidx.annotation.MainThread
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.app.ActivityCompat.startIntentSenderForResult
 import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
+import com.juul.kable.Advertisement
+import com.juul.kable.Peripheral
+import com.juul.kable.peripheral
 import io.almer.almercompanion.link.Link
+import io.almer.companionshared.server.DeviceScan
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.plus
 import timber.log.Timber
 import java.util.*
 import java.util.regex.Pattern
@@ -28,8 +40,23 @@ class MainApp : Application() {
         AppSettings(this)
     }
 
-    private lateinit var _link: Link
-    val link get() = _link
+    private val scope = CoroutineScope(Dispatchers.Main)
+
+    val deviceScan = DeviceScan(this)
+
+    private val _link = MutableStateFlow<Link?>(null)
+
+    val linkState = _link.asStateFlow()
+    val link get() = _link.value ?: error("No link is selected")
+
+    suspend fun selectDevice(advertisement: Advertisement) {
+        val peripheral = scope.peripheral(advertisement)
+        _link.value = Link(this, peripheral, scope)
+    }
+
+    fun disconnectPeripheral() {
+        _link.value = null
+    }
 
     val isWifiEnabled: Boolean
         get() {
@@ -40,53 +67,12 @@ class MainApp : Application() {
             return isConnected
         }
 
-    val bluetoothAdapter by lazy {
-        BluetoothAdapter.getDefaultAdapter() ?: error("Device does not support Bluetooth")
-    }
-
-    val isBluetoothEnabled: Boolean get() = bluetoothAdapter.isEnabled
-
-
-    fun filterDevices(deviceFilter: DeviceFilter<*>) {
-        val pairingRequest: AssociationRequest = AssociationRequest.Builder()
-            // Find only devices that match this request filter.
-            .addDeviceFilter(deviceFilter)
-            // Stop scanning as soon as one device matching the filter is found.
-            .setSingleDevice(true)
-            .build()
-
-
-        val deviceManager =
-            this.getSystemService(Context.COMPANION_DEVICE_SERVICE) as CompanionDeviceManager
-
-        deviceManager.associate(
-            pairingRequest,
-            object : CompanionDeviceManager.Callback() {
-                // Called when a device is found. Launch the IntentSender so the user
-                // can select the device they want to pair with.
-                override fun onDeviceFound(chooserLauncher: IntentSender) {
-                    startIntentSenderForResult(
-                        MainActivity(),
-                        chooserLauncher,
-                        SELECT_DEVICE_REQUEST_CODE, null, 0, 0, 0,
-                        null
-                    )
-                }
-
-
-                override fun onFailure(error: CharSequence?) {
-                    // Handle the failure.
-                }
-            }, null
-        )
-    }
-
     override fun onCreate() {
         super.onCreate()
 
         Timber.plant(Timber.DebugTree())
 
-        _link = Link(this)
+//        _link = Link(this)
 
         val deviceFilter: BluetoothDeviceFilter = BluetoothDeviceFilter.Builder()
             // Match only Bluetooth devices whose name matches the pattern.
