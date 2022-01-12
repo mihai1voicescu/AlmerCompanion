@@ -1,5 +1,6 @@
 package io.almer.almercompanion
 
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -19,6 +20,8 @@ import io.almer.almercompanion.composable.select.ListSelector
 import io.almer.almercompanion.link.Link
 import io.almer.almercompanion.screen.*
 import io.almer.almercompanion.ui.theme.AlmerCompanionTheme
+import kotlinx.coroutines.InternalCoroutinesApi
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -47,6 +50,11 @@ fun DebugGuard() {
             android.Manifest.permission.CHANGE_WIFI_STATE,
             android.Manifest.permission.ACCESS_NETWORK_STATE,
             android.Manifest.permission.ACCESS_WIFI_STATE,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                android.Manifest.permission.BLUETOOTH_CONNECT
+            } else {
+                android.Manifest.permission.BLUETOOTH
+            }
         )
     )
 
@@ -66,6 +74,7 @@ fun DebugGuard() {
 }
 
 
+@OptIn(InternalCoroutinesApi::class)
 @Composable
 fun LinkEnsure() {
     val app = mainApp()
@@ -73,12 +82,21 @@ fun LinkEnsure() {
     val scope = rememberCoroutineScope()
     val link by app.linkState.collectAsState()
 
+    val advertisers = remember {
+        mutableStateMapOf<String, Advertisement>()
+    }
+
     if (link == null) {
-        val advertisers = remember {
-            mutableStateListOf<Advertisement>()
+        LaunchedEffect(true) {
+            advertisers.clear()
+            scope.launch {
+                app.deviceScan.scan().collect {
+                    advertisers[it.address] = it
+                }
+            }
         }
 
-        ListSelector(items = advertisers, onSelect = {
+        ListSelector(items = advertisers.values, onSelect = {
             scope.launch {
                 app.selectDevice(it)
             }

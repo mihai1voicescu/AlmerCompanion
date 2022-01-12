@@ -1,29 +1,26 @@
 package io.almer.comanderdebug
 
 import android.Manifest
+import android.annotation.SuppressLint
+import android.bluetooth.BluetoothDevice
+import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.Button
+import androidx.annotation.RequiresPermission
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.app.ActivityCompat
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionsRequired
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import io.almer.comanderdebug.MainActivity.Companion.mainActivity
 import io.almer.comanderdebug.ui.theme.AlmerCompanionTheme
-import io.almer.almercompanion.link.CommanderConnector
 import io.almer.commander.CommanderServer
 import io.almer.companionshared.server.DeviceScan
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 @OptIn(ExperimentalPermissionsApi::class)
@@ -31,7 +28,6 @@ class MainActivity : ComponentActivity() {
 
     val deviceScan = DeviceScan(this)
     lateinit var commanderServer: CommanderServer
-    lateinit var commanderConnector: io.almer.almercompanion.link.CommanderConnector
 
     override fun onDestroy() {
         super.onDestroy()
@@ -43,7 +39,6 @@ class MainActivity : ComponentActivity() {
 
         Timber.plant(Timber.DebugTree())
         commanderServer = CommanderServer(this)
-        commanderConnector = io.almer.almercompanion.link.CommanderConnector(this)
 
         setContent {
             AlmerCompanionTheme {
@@ -88,55 +83,23 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@SuppressLint("MissingPermission")
+fun getName(device: BluetoothDevice): String? {
+    return device.name
+}
+
 @Composable
 fun Main() {
     val act = mainActivity()
-    val state by act.deviceScan.viewState.collectAsState()
 
-    val scope = rememberCoroutineScope()
+    val device by act.commanderServer.device.collectAsState()
 
-    val results by act.deviceScan.scanResults.collectAsState()
+    device?.let { device ->
 
-    val messages by act.commanderServer.messages.collectAsState()
+        val name =
+            Text(getName(device) ?: device.address)
 
-    Column {
-        Button(onClick = {
-            scope.launch {
-//                act.chatServer.scanner()
-                act.deviceScan.scan(4_000)
-            }
-        }) {
-            Text("Scan")
-        }
-
-        Text("Entries")
-
-        LazyColumn(content = {
-            results.map {
-                item {
-                    Button(onClick = {
-                        scope.launch {
-                            act.commanderConnector.setCurrentChatConnection(it.value)
-
-                            withContext(Dispatchers.Main) {
-                                while (true) {
-                                    delay(2000)
-                                    act.commanderConnector.sendMessage("Hello")
-                                }
-                            }
-
-                        }
-                    }) {
-                        Text(it.value.name)
-                    }
-                }
-            }
-
-            messages.map {
-                item {
-                    Text(it)
-                }
-            }
-        })
+    } ?: run {
+        Text("Not connected")
     }
 }

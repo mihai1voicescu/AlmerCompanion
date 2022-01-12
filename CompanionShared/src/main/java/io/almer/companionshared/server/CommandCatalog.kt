@@ -6,7 +6,8 @@ import com.juul.kable.DiscoveredCharacteristic
 import com.juul.kable.Peripheral
 import io.almer.companionshared.model.WiFi
 import kotlinx.serialization.decodeFromByteArray
-import kotlinx.serialization.protobuf.ProtoBuf
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import java.util.*
 
 interface CommandCatalog<Type> {
@@ -25,7 +26,7 @@ abstract class Command<Response>(
 ) {
     object ListWiFi : Command<List<WiFi>>() {
         override fun deserialize(byteArray: ByteArray): List<WiFi> {
-            val wifis = ProtoBuf.decodeFromByteArray<List<WiFi>>(byteArray)
+            val wifis = Json.decodeFromString<List<WiFi>>(byteArray.decodeToString())
 
             return wifis
         }
@@ -60,5 +61,17 @@ class CharacteristicCommandCatalog(val service: BluetoothGattService) :
         return char
     }
 
-    override val ListWiFi: BluetoothGattCharacteristic = writeChar(CommandsUUID.ListWiFi)
+    private fun readChar(uuid: UUID): BluetoothGattCharacteristic {
+        val char = BluetoothGattCharacteristic(
+            uuid,
+            BluetoothGattCharacteristic.PROPERTY_READ,
+            BluetoothGattCharacteristic.PERMISSION_READ
+        )
+
+        service.addCharacteristic(char)
+
+        return char
+    }
+
+    override val ListWiFi: BluetoothGattCharacteristic = readChar(CommandsUUID.ListWiFi)
 }

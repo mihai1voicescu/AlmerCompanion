@@ -19,6 +19,7 @@ import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.juul.kable.Advertisement
+import com.juul.kable.AndroidPeripheral
 import com.juul.kable.Peripheral
 import com.juul.kable.peripheral
 import io.almer.almercompanion.link.Link
@@ -50,7 +51,9 @@ class MainApp : Application() {
     val link get() = _link.value ?: error("No link is selected")
 
     suspend fun selectDevice(advertisement: Advertisement) {
-        val peripheral = scope.peripheral(advertisement)
+        val peripheral: AndroidPeripheral = scope.peripheral(advertisement) as AndroidPeripheral
+
+
         _link.value = Link(this, peripheral, scope)
     }
 

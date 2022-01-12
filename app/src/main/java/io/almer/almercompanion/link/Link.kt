@@ -1,14 +1,12 @@
 package io.almer.almercompanion.link
 
 import WiFiCommander
-import android.bluetooth.BluetoothAdapter
 import android.content.Context
 import android.net.wifi.WifiInfo
 import android.os.Build
-import com.juul.kable.Characteristic
+import com.juul.kable.AndroidPeripheral
 import com.juul.kable.Peripheral
-import com.juul.kable.logs.Logging
-import com.juul.kable.peripheral
+import com.juul.kable.characteristicOf
 import io.almer.almercompanion.screen.WifiConnectionInfo
 import io.almer.commander.BluetoothCommander
 import io.almer.companionshared.model.BluetoothDevice
@@ -18,13 +16,13 @@ import io.almer.companionshared.server.MESSAGE_UUID
 import io.almer.companionshared.server.SERVICE_UUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.decodeFromByteArray
-import kotlinx.serialization.protobuf.ProtoBuf
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import timber.log.Timber
+import kotlin.RuntimeException
 
 private fun WifiInfo.toWiFI(): WiFi {
     val name: String = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -57,6 +55,19 @@ class Link private constructor(
 
     private val _bluetooth = MutableStateFlow<BluetoothDevice?>(null)
     val bluetooth: StateFlow<BluetoothDevice?> = _bluetooth
+    val messageCharacteristic = characteristicOf(SERVICE_UUID.toString(), MESSAGE_UUID.toString())
+
+    suspend fun sendMessage(message: String) {
+        scope.launch {
+            val messageBytes = message.toByteArray(Charsets.UTF_8)
+            peripheral.write(
+                messageCharacteristic,
+                messageBytes,
+//                    writeType = WriteType.WithoutResponse
+            )
+//                _messages.value = _messages.value + message
+        }.join()
+    }
 
 
     init {
@@ -70,11 +81,28 @@ class Link private constructor(
         }
     }
 
-    suspend fun listWiFi(): Collection<WiFi> {
+    suspend fun listWiFi(): List<WiFi> {
 //        return wifiCommander.listWifi()
-        val value = peripheral.read(catalog.ListWiFi) ?: error("No connected device")
 
-        return ProtoBuf.decodeFromByteArray(value)
+        val char = catalog.ListWiFi;
+        val value = try {
+            peripheral.read(char)
+        } catch (e: Exception) {
+//            throw e
+            throw RuntimeException("Unable to read", e)
+        }
+
+        Timber.d("Got response ${value.toList()}")
+
+        val string = value.decodeToString()
+        Timber.d("Got response $string")
+
+        val response = try {
+            Json.decodeFromString<List<WiFi>>(string)
+        } catch (e: Exception) {
+            throw RuntimeException("Unable to decode string: \"$string\"", e)
+        }
+        return response
     }
 
     suspend fun selectWiFi(networkId: Int) {
@@ -108,7 +136,7 @@ class Link private constructor(
     companion object {
         suspend operator fun invoke(
             context: Context,
-            peripheral: Peripheral,
+            peripheral: AndroidPeripheral,
             scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
         ): Link {
             Timber.i("Peripheral: creating")
@@ -123,7 +151,16 @@ class Link private constructor(
 
             Timber.i("Successfully selected current peripheral: %s", peripheral)
 
-            return Link(context, peripheral, scope)
+
+            Timber.i("Setting the new MTU to 512")
+            val newMtu = peripheral.requestMtu(512)
+            Timber.i("MTU set to $newMtu")
+
+            val link = Link(context, peripheral, scope)
+
+            link.sendMessage("Hello")
+
+            return link
         }
     }
 }

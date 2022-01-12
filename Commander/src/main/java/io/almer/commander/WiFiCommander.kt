@@ -54,7 +54,7 @@ class WiFiCommander private constructor(
 
         val known = configuredNetworks().associateBy { it.SSID.trim('"') }
 
-        return list.map {
+        val wifis = list.map {
             WiFi(
                 it.SSID,
                 it.SSID,
@@ -62,6 +62,9 @@ class WiFiCommander private constructor(
                 known[it.SSID]?.networkId
             )
         }
+
+        Timber.d("Wifis: %s", wifis)
+        return wifis
     }
 
 

@@ -14,14 +14,15 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.flow.*
 import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.encodeToByteArray
-import kotlinx.serialization.protobuf.ProtoBuf
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import timber.log.Timber
+import kotlin.math.min
 
 
 @OptIn(ExperimentalSerializationApi::class)
 inline fun <reified T> toGattSuccess(t: T) =
-    Pair(BluetoothGatt.GATT_SUCCESS, ProtoBuf.encodeToByteArray(t))
+    Pair(BluetoothGatt.GATT_SUCCESS, Json.encodeToString(t).toByteArray())
 
 class CommanderServer(
     val context: Context,
@@ -50,8 +51,8 @@ class CommanderServer(
     val messages get() = _messages.asStateFlow()
 
     // LiveData for reporting connection requests
-    private val _connectionRequest = Channel<BluetoothDevice>(100)
-    val connectionRequest get() = _connectionRequest.receiveAsFlow()
+    private val _device = MutableStateFlow<BluetoothDevice?>(null)
+    val device get() = _device.asStateFlow()
 
     private var gattServer: BluetoothGattServer? = null
     private val gattServerCallback: BluetoothGattServerCallback = GattServerCallback()
@@ -60,6 +61,10 @@ class CommanderServer(
 
     private val gattWriteRequestChannel = Channel<GattWriteRequest>(200)
     private val gattReadRequestChannel = Channel<GattReadRequest>(200)
+
+    private var mtu: Int = 23
+
+    private val responseRegister = ResponseRegister()
 
     init {
         if (!adapter.isEnabled) {
@@ -74,9 +79,6 @@ class CommanderServer(
         }
         startAdvertisement()
     }
-
-    // Properties for current chat device connection
-    private val _deviceConnection = Channel<DeviceConnectionState?>(100)
 
     fun stopServer() {
         stopAdvertising()
@@ -194,10 +196,16 @@ class CommanderServer(
                 "onConnectionStateChange: Server $device ${device.name} success: $isSuccess connected: $isConnected"
             )
             if (isSuccess && isConnected) {
-                _connectionRequest.trySendBlocking(device)
+                _device.value = device
             } else {
-                _deviceConnection.trySendBlocking(DeviceConnectionState.Disconnected)
+                _device.compareAndSet(device, null)
             }
+        }
+
+        override fun onMtuChanged(device: BluetoothDevice?, mtu: Int) {
+            super.onMtuChanged(device, mtu)
+            Timber.i("MTU Changed to $mtu")
+            this@CommanderServer.mtu = mtu
         }
 
         override fun onCharacteristicWriteRequest(
@@ -253,6 +261,36 @@ class CommanderServer(
             characteristic: BluetoothGattCharacteristic?
         ) {
             super.onCharacteristicReadRequest(device, requestId, offset, characteristic)
+
+            if (characteristic == null) {
+                Timber.w("No characteristic has been requested")
+                return
+            }
+            if (offset > 0) {
+                Timber.d("Request to continue ${device?.name} $characteristic with offset $offset")
+                responseRegister.get(device, characteristic)?.let { response ->
+                    val to = min(offset + mtu, response.value.size)
+
+                    Timber.d("Request to continue ${device?.name} $characteristic with to $to because size ${response.value.size}")
+
+                    gattServer?.sendResponse(
+                        device,
+                        requestId,
+                        response.result,
+                        offset,
+                        response.value.sliceArray(offset until to)
+                    )
+                } ?: kotlin.run {
+                    Timber.w("Request to continue ${device?.name} $characteristic with offset $offset was not found")
+                }
+            } else {
+                Timber.d("Request to read ${device?.name} $characteristic with offset $offset")
+                gattReadRequestChannel.trySendBlocking(
+                    GattReadRequest(
+                        device, requestId, offset, characteristic
+                    )
+                )
+            }
         }
     }
 
@@ -274,7 +312,39 @@ class CommanderServer(
                 }
                 else -> error("Could not identify request UUID")
             }
-            gattServer?.sendResponse(request.device, request.requestId, result, 0, value)
+
+
+            mtu.let { mtu ->
+                if (value.size < mtu) {
+                    Timber.d("Request sent fully for  ${request.device?.name} ${request.characteristic}")
+                    gattServer?.sendResponse(request.device, request.requestId, result, 0, value)
+                } else {
+                    val toSend = value.sliceArray(0 until mtu)
+                    Timber.d("Request sent partially for  ${request.device?.name} ${request.characteristic} ${toSend.toList()}")
+                    responseRegister.add(request.device, request.characteristic, result, value)
+                    gattServer?.sendResponse(
+                        request.device,
+                        request.requestId,
+                        result,
+                        0,
+                        toSend
+                    )
+                }
+            }
+
+
+//
+//            val step = 50
+//
+//            var offset = 0
+//
+//            // fixme optimise because this creates a copy
+//            value.asIterable().chunked(step).forEach {
+//                Timber.d("Sending: ${it.toByteArray().decodeToString()}")
+//                gattServer?.sendResponse(request.device, request.requestId, result, offset, it.toByteArray())
+//                offset += it.size
+//            }
+
         }.launchIn(scope)
     }
 
