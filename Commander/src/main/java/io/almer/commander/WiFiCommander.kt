@@ -165,6 +165,10 @@ class WiFiCommander private constructor(
         Timber.d("Wifi %s disabling was %s", networkId, isDisabled.successString())
     }
 
+    fun killWifi() {
+        wifiManager.setWifiEnabled(false)
+    }
+
     suspend fun setWifi(networkId: Int) {
 //        forgetAll()
 

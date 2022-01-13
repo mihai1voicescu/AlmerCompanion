@@ -8,7 +8,14 @@ import android.bluetooth.le.AdvertiseSettings
 import android.bluetooth.le.BluetoothLeAdvertiser
 import android.content.Context
 import android.os.ParcelUuid
+import io.almer.companionshared.model.WifiConnectionInfo
+import io.almer.companionshared.model.toBluetoothDeviceModel
+import io.almer.companionshared.model.toWiFI
 import io.almer.companionshared.server.*
+import io.almer.companionshared.server.commands.*
+import io.almer.companionshared.server.commands.command.Listen
+import io.almer.companionshared.server.commands.command.Read
+import io.almer.companionshared.server.commands.command.Write
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.trySendBlocking
@@ -21,8 +28,16 @@ import kotlin.math.min
 
 
 @OptIn(ExperimentalSerializationApi::class)
-inline fun <reified T> toGattSuccess(t: T) =
-    Pair(BluetoothGatt.GATT_SUCCESS, Json.encodeToString(t).toByteArray())
+inline fun toGattSuccess(byteArray: ByteArray) =
+    Pair(BluetoothGatt.GATT_SUCCESS, byteArray)
+
+private fun toGattSuccess() = Pair(BluetoothGatt.GATT_SUCCESS, null)
+
+private data class NotificationEnableResponse(
+    val status: Int = BluetoothGatt.GATT_SUCCESS,
+    val shouldNotify: Boolean = false,
+    val notificationValue: ByteArray? = null
+)
 
 class CommanderServer(
     val context: Context,
@@ -30,6 +45,7 @@ class CommanderServer(
 ) : AutoCloseable {
 
     private val wifiCommander = WiFiCommander(context)
+    private val bluetoothCommander = BluetoothCommander(context)
     private val bluetoothManager: BluetoothManager =
         context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
 
@@ -64,7 +80,16 @@ class CommanderServer(
 
     private var mtu: Int = 23
 
+    // todo use requestId as key to ensure atomics
     private val responseRegister = ResponseRegister()
+
+//    private var _deviceScope: CoroutineScope = scope + Dispatchers.Default
+//    private val deviceScope get() = _deviceScope
+
+//    fun newScope() {
+//        _deviceScope.cancel()
+//        _deviceScope = scope + Dispatchers.Default
+//    }
 
     init {
         if (!adapter.isEnabled) {
@@ -197,6 +222,7 @@ class CommanderServer(
             )
             if (isSuccess && isConnected) {
                 _device.value = device
+//                newScope()
             } else {
                 _device.compareAndSet(device, null)
             }
@@ -206,6 +232,161 @@ class CommanderServer(
             super.onMtuChanged(device, mtu)
             Timber.i("MTU Changed to $mtu")
             this@CommanderServer.mtu = mtu
+        }
+
+
+        override fun onDescriptorReadRequest(
+            device: BluetoothDevice?,
+            requestId: Int,
+            offset: Int,
+            descriptor: BluetoothGattDescriptor?
+        ) {
+            super.onDescriptorReadRequest(device, requestId, offset, descriptor)
+
+            Timber.d("New descriptor read request")
+        }
+
+        override fun onDescriptorWriteRequest(
+            device: BluetoothDevice?,
+            requestId: Int,
+            descriptor: BluetoothGattDescriptor?,
+            preparedWrite: Boolean,
+            responseNeeded: Boolean,
+            offset: Int,
+            value: ByteArray?
+        ) {
+            super.onDescriptorWriteRequest(
+                device,
+                requestId,
+                descriptor,
+                preparedWrite,
+                responseNeeded,
+                offset,
+                value
+            )
+
+
+            Timber.d("New descriptor write request")
+
+            if (descriptor == null)
+                return
+
+            if (descriptor.uuid == CCCD) {
+                val uuid = listenUUID(descriptor.characteristic.uuid) ?: kotlin.run {
+                    Timber.w("Unknown listen UUID ${descriptor.characteristic.uuid}$}")
+                    return
+                }
+
+                val response: NotificationEnableResponse = when {
+                    BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE.contentEquals(value) -> when (uuid) {
+                        ListenUUID.WiFi -> enableWifiNotifications()
+                        ListenUUID.Bluetooth -> enableBluetoothNotifications()
+                        ListenUUID.ScanBluetooth -> enableScanBluetoothNotifications()
+                    }
+
+                    BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE.contentEquals(value) -> {
+                        disableNotification(uuid)
+                    }
+                    else -> {
+                        Timber.w("Unknown value on CCCD descriptor")
+                        return
+                    }
+                }
+
+                if (responseNeeded) {
+                    Timber.d("Sending successful response")
+                    gattServer?.sendResponse(device, requestId, response.status, 0, null)
+                }
+
+                if (response.shouldNotify) {
+                    descriptor.characteristic.value = response.notificationValue
+                    gattServer?.notifyCharacteristicChanged(
+                        device,
+                        descriptor.characteristic,
+                        false
+                    )
+                }
+            }
+        }
+
+        var listens = mutableMapOf<ListenUUID, Job>()
+
+
+        fun enableWifiNotifications(): NotificationEnableResponse {
+            listens.put(ListenUUID.WiFi,
+//                deviceScope.launch {
+                scope.launch {
+                wifiCommander.wifi.collect {
+                    val char = characteristicCommandCatalog.WiFi
+
+                    char.value =
+                        Listen.WiFi.serializeResponse(it?.toWiFI())
+                    this@CommanderServer.gattServer?.notifyCharacteristicChanged(
+                        device.value,
+                        char,
+                        false
+                    )
+                }
+            })?.apply { cancel() }
+
+            return NotificationEnableResponse(
+                shouldNotify = true,
+                notificationValue = Listen.WiFi.serializeResponse(wifiCommander.wifi.value?.toWiFI())
+            )
+        }
+
+        fun enableBluetoothNotifications(): NotificationEnableResponse {
+            listens.put(ListenUUID.Bluetooth,
+//                deviceScope.launch {
+                scope.launch {
+                bluetoothCommander.headset.collect {
+                    val char = characteristicCommandCatalog.Bluetooth
+
+                    char.value =
+                        Listen.Bluetooth.serializeResponse(
+                            it?.connectedDevices?.firstOrNull()?.toBluetoothDeviceModel(true)
+                        )
+
+                    this@CommanderServer.gattServer?.notifyCharacteristicChanged(
+                        device.value,
+                        char,
+                        false
+                    )
+                }
+            })?.apply { cancel() }
+
+            return NotificationEnableResponse(
+                shouldNotify = true,
+                notificationValue = Listen.Bluetooth.serializeResponse(
+                    bluetoothCommander.headset.value?.connectedDevices?.firstOrNull()
+                        ?.toBluetoothDeviceModel(true)
+                )
+            )
+
+        }
+
+        fun enableScanBluetoothNotifications(): NotificationEnableResponse {
+            listens.put(ListenUUID.ScanBluetooth,
+//                deviceScope.launch {
+                scope.launch {
+                bluetoothCommander.scanDevices().collect {
+                    val char = characteristicCommandCatalog.ScanBluetooth
+
+                    char.value = Listen.ScanBluetooth.serializeResponse(it)
+                    this@CommanderServer.gattServer?.notifyCharacteristicChanged(
+                        device.value,
+                        char,
+                        false
+                    )
+                }
+            })?.apply { cancel() }
+
+            return NotificationEnableResponse()
+        }
+
+        fun disableNotification(uuid: ListenUUID): NotificationEnableResponse {
+            listens.get(uuid)?.cancel()
+            return NotificationEnableResponse()
         }
 
         override fun onCharacteristicWriteRequest(
@@ -285,33 +466,74 @@ class CommanderServer(
                 }
             } else {
                 Timber.d("Request to read ${device?.name} $characteristic with offset $offset")
+
+                readUUID(characteristic.uuid) ?: listenUUID(characteristic.uuid) ?: kotlin.run {
+                    Timber.w("Unrecognized UUID")
+                    return
+                }
+
+                Timber.d("Sending new request to gattReadRequestChannel")
                 gattReadRequestChannel.trySendBlocking(
                     GattReadRequest(
                         device, requestId, offset, characteristic
                     )
                 )
+                Timber.d("Request sent to gattReadRequestChannel")
+
             }
         }
     }
 
     init {
         gattWriteRequestChannel.receiveAsFlow().onEach { request ->
-            val (result, value) = when (request.characteristic.uuid) {
-                CommandsUUID.ListWiFi -> {
-                    handleListWifi()
-                }
-                else -> error("Could not identify request UUID")
+            if (request.value == null) {
+                Timber.w("Empty value was sent on ${request.characteristic}")
+                return@onEach
+            }
+
+            val (result, value) = when (writeUUID(request.characteristic.uuid)) {
+                WriteUUID.SelectWiFi -> handleSelectWifi(Write.SelectWiFi.deserializeRequest(request.value))
+                WriteUUID.ConnectToWifi -> handleConnectToWifi(
+                    Write.ConnectToWifi.deserializeRequest(
+                        request.value
+                    )
+                )
+                WriteUUID.ForgetWiFi -> handleForgetWifi(Write.ForgetWiFi.deserializeRequest(request.value))
+                WriteUUID.SelectBluetooth -> handleSelectBluetooth(
+                    Write.SelectBluetooth.deserializeRequest(
+                        request.value
+                    )
+                )
+                null -> error("Could not identify request UUID")
             }
             gattServer?.sendResponse(request.device, request.requestId, result, 0, value)
         }.launchIn(scope)
 
         gattReadRequestChannel.receiveAsFlow().onEach { request ->
-            val (result, value) = when (request.characteristic?.uuid) {
-                CommandsUUID.ListWiFi -> {
-                    handleListWifi()
+
+            Timber.d("New gattReadRequestChannel message")
+
+            val uuid = request.characteristic?.uuid!!
+
+            val (result, value) = when (readUUID(uuid)) {
+                ReadUUID.ListWiFi -> handleListWifi()
+                ReadUUID.PairedDevices -> handlePairedDevices()
+                null -> {
+                    when (listenUUID(uuid)) {
+                        ListenUUID.WiFi -> toGattSuccess(Listen.WiFi.serializeResponse(wifiCommander.wifi.value?.toWiFI()))
+                        ListenUUID.Bluetooth -> toGattSuccess(
+                            Listen.Bluetooth.serializeResponse(
+                                bluetoothCommander.headset.value?.connectedDevices?.firstOrNull()
+                                    ?.toBluetoothDeviceModel(true)
+                            )
+                        )
+                        ListenUUID.ScanBluetooth -> TODO()
+                        null -> error("Unrecognized UUID")
+                    }
                 }
-                else -> error("Could not identify request UUID")
             }
+
+            Timber.d("Request handled")
 
 
             mtu.let { mtu ->
@@ -332,26 +554,52 @@ class CommanderServer(
                 }
             }
 
-
-//
-//            val step = 50
-//
-//            var offset = 0
-//
-//            // fixme optimise because this creates a copy
-//            value.asIterable().chunked(step).forEach {
-//                Timber.d("Sending: ${it.toByteArray().decodeToString()}")
-//                gattServer?.sendResponse(request.device, request.requestId, result, offset, it.toByteArray())
-//                offset += it.size
-//            }
-
         }.launchIn(scope)
     }
 
+    private fun handleScanBluetooth(): Pair<Int, ByteArray> {
+        TODO("Not yet implemented")
+    }
+
+    private suspend fun handlePairedDevices(): Pair<Int, ByteArray> {
+        val devices = bluetoothCommander.getBondedDevices()
+
+        return toGattSuccess(Read.PairedDevices.serializeResponse(devices))
+    }
+
+    private fun handleSelectBluetooth(name: String): Pair<Int, ByteArray?> {
+        val isConnected = bluetoothCommander.selectDevice(name)
+
+//        return toGattSuccess(Write.SelectBluetooth.serializeResponse(isConnected))
+        return toGattSuccess()
+    }
+
+    private fun handleForgetWifi(networkId: Int): Pair<Int, ByteArray?> {
+        wifiCommander.forgetWifi(networkId)
+
+        return toGattSuccess()
+    }
+
+    private suspend fun handleConnectToWifi(wifiConnectionInfo: WifiConnectionInfo): Pair<Int, ByteArray?> {
+        val networkId =
+            wifiCommander.learnWifiWPA(wifiConnectionInfo.wifi.ssid, wifiConnectionInfo.password)
+
+        wifiCommander.setWifi(networkId)
+
+        return toGattSuccess()
+    }
+
     private suspend fun handleListWifi(): Pair<Int, ByteArray> {
+        Timber.d("handleListWifi()")
         val wifis = wifiCommander.listWifi()
 
-        return toGattSuccess(wifis)
+        return toGattSuccess(Read.ListWiFi.serializeResponse(wifis))
+    }
+
+    private suspend fun handleSelectWifi(networkId: Int): Pair<Int, ByteArray?> {
+        wifiCommander.setWifi(networkId)
+
+        return toGattSuccess()
     }
 
     /**

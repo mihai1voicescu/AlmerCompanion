@@ -95,10 +95,7 @@ fun Main() {
     val device by act.commanderServer.device.collectAsState()
 
     device?.let { device ->
-
-        val name =
-            Text(getName(device) ?: device.address)
-
+        Text(getName(device) ?: device.address)
     } ?: run {
         Text("Not connected")
     }

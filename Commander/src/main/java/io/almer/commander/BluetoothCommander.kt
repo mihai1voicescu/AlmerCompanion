@@ -15,19 +15,13 @@ import android.util.Log
 
 import android.bluetooth.BluetoothHeadset
 import android.bluetooth.BluetoothProfile.ServiceListener
+import io.almer.companionshared.model.toBluetoothDeviceModel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.*
 import java.lang.reflect.Method
 
 
 typealias BluetoothDeviceModel = io.almer.companionshared.model.BluetoothDevice
-
-
-private fun BluetoothDevice.toBluetoothDeviceModel(isPaired: Boolean = true) = BluetoothDeviceModel(
-    name = name,
-    isPaired = isPaired,
-    uuid = null
-)
 
 const val TAG = "BluetoothCommander"
 
@@ -84,7 +78,7 @@ class BluetoothCommander(
         bluetoothAdapter.getProfileProxy(context, mProfileListener, BluetoothProfile.HEADSET)
     }
 
-    suspend fun getBondedDevices(): Collection<BluetoothDeviceModel> {
+    suspend fun getBondedDevices(): List<BluetoothDeviceModel> {
         return bluetoothAdapter.bondedDevices.map(BluetoothDevice::toBluetoothDeviceModel)
     }
 

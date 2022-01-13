@@ -26,6 +26,7 @@ import io.almer.almercompanion.composable.select.itemSelector
 import io.almer.almercompanion.composable.text.BodyText
 import io.almer.companionshared.model.WiFi
 import io.almer.almercompanion.safePopBackStack
+import io.almer.companionshared.model.WifiConnectionInfo
 import kotlinx.coroutines.*
 import timber.log.Timber
 
@@ -74,11 +75,12 @@ private fun SelectWiFi() {
         connectWifi?.let { wifi ->
             WiFiPasswordDialog(
                 ssid = wifi.ssid,
+                wifi= wifi,
                 onClose = {
                     navController.popBackStack()
                 },
                 onSubmit = { wifiConnectionInfo ->
-                    app.link.connectToWifi(wifi, wifiConnectionInfo)
+                    app.link.connectToWifi(wifiConnectionInfo)
 
                     null
                 })
@@ -128,12 +130,11 @@ private fun SelectWiFi() {
     }
 }
 
-data class WifiConnectionInfo(val password: String)
-
 @Composable
 fun WiFiPasswordDialog(
     ssid: String,
     onClose: () -> Unit,
+    wifi: WiFi,
     onSubmit: suspend (WifiConnectionInfo) -> String?,
 ) {
     val scope = rememberCoroutineScope()
@@ -164,7 +165,7 @@ fun WiFiPasswordDialog(
             Button(onClick = {
                 isSubmitting = true
                 scope.launch {
-                    val err = onSubmit(WifiConnectionInfo(password))
+                    val err = onSubmit(WifiConnectionInfo(password, wifi))
 
                     if (err != null) {
                         // todo handle show error

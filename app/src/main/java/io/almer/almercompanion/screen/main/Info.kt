@@ -74,9 +74,9 @@ private fun WiFi() {
 private fun Bluetooth() {
     val app = mainApp()
 
-    val headset by app.link.bluetoothCommander.headset.collectAsState()
+    val headset by app.link.bluetooth.collectAsState()
 
-    BluetoothView(headset?.connectedDevices?.firstOrNull()?.name ?: "Not connected")
+    BluetoothView(headset?.name ?: "Not connected")
 }
 
 @Composable

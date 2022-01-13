@@ -1,19 +1,22 @@
 package io.almer.almercompanion.link
 
-import WiFiCommander
 import android.content.Context
 import android.net.wifi.WifiInfo
 import android.os.Build
 import com.juul.kable.AndroidPeripheral
 import com.juul.kable.Peripheral
+import com.juul.kable.WriteType
 import com.juul.kable.characteristicOf
-import io.almer.almercompanion.screen.WifiConnectionInfo
-import io.almer.commander.BluetoothCommander
 import io.almer.companionshared.model.BluetoothDevice
 import io.almer.companionshared.model.WiFi
-import io.almer.companionshared.server.ClientCommandCatalog
+import io.almer.companionshared.model.WifiConnectionInfo
+import io.almer.companionshared.server.commands.ClientCommandCatalog
 import io.almer.companionshared.server.MESSAGE_UUID
 import io.almer.companionshared.server.SERVICE_UUID
+import io.almer.companionshared.server.commands.ReadUUID
+import io.almer.companionshared.server.commands.command.Commands
+import io.almer.companionshared.server.commands.command.Listen
+import io.almer.companionshared.server.commands.command.Write
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -24,20 +27,8 @@ import kotlinx.serialization.json.Json
 import timber.log.Timber
 import kotlin.RuntimeException
 
-private fun WifiInfo.toWiFI(): WiFi {
-    val name: String = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-        this.passpointProviderFriendlyName ?: this.ssid
-    } else {
-        // todo Get a name somehow
-        this.ssid
-    }
-
-    return WiFi(
-        name = name,
-        ssid = this.ssid,
-        strength = this.linkSpeed, // todo not OK
-    )
-}
+val UNKNOWN_WIFI = WiFi(name = "UNKNOWN", ssid = "UNKNOWN", 0, null)
+val UNKNOWN_BLUETOOTH = BluetoothDevice(name = "UNKNOWN", isPaired = true, "")
 
 @OptIn(ExperimentalSerializationApi::class)
 class Link private constructor(
@@ -47,13 +38,10 @@ class Link private constructor(
 ) {
     private val catalog = ClientCommandCatalog(peripheral)
 
-    private val wifiCommander = WiFiCommander(context)
-    val bluetoothCommander = BluetoothCommander(context)
-
-    private val _wifi = MutableStateFlow(wifiCommander.wifi.value?.toWiFI())
+    private val _wifi = MutableStateFlow<WiFi?>(UNKNOWN_WIFI)
     val wifi = _wifi.asStateFlow()
 
-    private val _bluetooth = MutableStateFlow<BluetoothDevice?>(null)
+    private val _bluetooth = MutableStateFlow<BluetoothDevice?>(UNKNOWN_BLUETOOTH)
     val bluetooth: StateFlow<BluetoothDevice?> = _bluetooth
     val messageCharacteristic = characteristicOf(SERVICE_UUID.toString(), MESSAGE_UUID.toString())
 
@@ -71,66 +59,86 @@ class Link private constructor(
 
 
     init {
-        scope.launch {
-            scope.launch {
-                wifiCommander.wifi.collect {
-                    _wifi.emit(it?.toWiFI())
-                }
-            }
-            _wifi.emit(wifiCommander.wifi.value?.toWiFI())
-        }
+        //todo collect wifi
+//        scope.launch {
+//            scope.launch {
+//                wifiCommander.wifi.collect {
+//                    _wifi.emit(it?.toWiFI())
+//                }
+//            }
+//            _wifi.emit(wifiCommander.wifi.value?.toWiFI())
+//        }
     }
 
     suspend fun listWiFi(): List<WiFi> {
-//        return wifiCommander.listWifi()
-
-        val char = catalog.ListWiFi;
         val value = try {
-            peripheral.read(char)
+            peripheral.read(catalog.ListWiFi)
         } catch (e: Exception) {
-//            throw e
-            throw RuntimeException("Unable to read", e)
+            throw RuntimeException("Unable to ListWifi", e)
         }
 
-        Timber.d("Got response ${value.toList()}")
-
-        val string = value.decodeToString()
-        Timber.d("Got response $string")
-
         val response = try {
-            Json.decodeFromString<List<WiFi>>(string)
+            Commands.ListWiFi.deserializeResponse(value)
         } catch (e: Exception) {
-            throw RuntimeException("Unable to decode string: \"$string\"", e)
+            throw RuntimeException("Unable to decode string", e)
         }
         return response
     }
 
+
+    private fun listen() {
+        scope.launch {
+            peripheral.observe(catalog.WiFi).map { Listen.WiFi.deserializeResponse(it) }.collect {
+                _wifi.value = it
+            }
+        }
+
+        scope.launch {
+            peripheral.observe(catalog.Bluetooth).map { Listen.Bluetooth.deserializeResponse(it) }
+                .collect {
+                    _bluetooth.value = it
+                }
+        }
+    }
+
     suspend fun selectWiFi(networkId: Int) {
-        return wifiCommander.setWifi(networkId)
+        return peripheral.write(catalog.SelectWiFi, Write.SelectWiFi.serializeRequest(networkId))
     }
 
     suspend fun forgetWiFi(networkId: Int) {
-        return wifiCommander.forgetWifi(networkId)
+        return peripheral.write(catalog.ForgetWiFi, Write.ForgetWiFi.serializeRequest(networkId))
     }
 
-    suspend fun connectToWifi(wifiInfo: WiFi, connectionInfo: WifiConnectionInfo): String? {
-        val wifi = wifiCommander.learnWifiWPA(wifiInfo.ssid, connectionInfo.password)
-
-        wifiCommander.setWifi(wifi)
-
+    suspend fun connectToWifi(connectionInfo: WifiConnectionInfo): String? {
+        peripheral.write(
+            catalog.ConnectToWifi,
+            Write.ConnectToWifi.serializeRequest(connectionInfo)
+        )
         return null
     }
 
-    suspend fun pairedDevices(): Collection<BluetoothDevice> {
-        return bluetoothCommander.getBondedDevices()
+    suspend fun pairedDevices(): List<BluetoothDevice> {
+        val value = try {
+            peripheral.read(catalog.PairedDevices)
+        } catch (e: Exception) {
+            throw RuntimeException("Unable to ListWifi", e)
+        }
+
+        val response = try {
+            Commands.PairedDevices.deserializeResponse(value)
+        } catch (e: Exception) {
+            throw RuntimeException("Unable to decode string", e)
+        }
+        return response
     }
 
     fun scanBluetooth(): Flow<BluetoothDevice> {
-        return bluetoothCommander.scanDevices()
+        return peripheral.observe(catalog.ScanBluetooth)
+            .map { Listen.ScanBluetooth.deserializeResponse(it) }
     }
 
     suspend fun selectBluetooth(name: String) {
-        bluetoothCommander.selectDevice(name)
+        peripheral.write(catalog.SelectBluetooth, Write.SelectBluetooth.serializeRequest(name))
     }
 
     companion object {
@@ -159,6 +167,8 @@ class Link private constructor(
             val link = Link(context, peripheral, scope)
 
             link.sendMessage("Hello")
+
+            link.listen()
 
             return link
         }
