@@ -18,6 +18,7 @@ class ClientCommandCatalog(peripheral: Peripheral) : CommandCatalog<DiscoveredCh
     override val ForgetWiFi = charMap[CommandsUUID.ForgetWiFi]!!
     override val ConnectToWifi = charMap[CommandsUUID.ConnectToWifi]!!
     override val SelectBluetooth = charMap[CommandsUUID.SelectBluetooth]!!
+    override val ForgetBluetooth = charMap[CommandsUUID.ForgetBluetooth]!!
 //    override val StartBluetoothScan = charMap[CommandsUUID.StartBluetoothScan]!!
 //    override val StopBluetoothScan = charMap[CommandsUUID.StopBluetoothScan]!!
 

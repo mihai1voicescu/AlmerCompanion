@@ -3,6 +3,7 @@ package io.almer.companionshared.server.commands
 import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothGattService
+import io.almer.companionshared.server.commands.command.Write
 import java.util.*
 
 
@@ -49,6 +50,8 @@ private class CharacteristicWriteCatalog(val service: BluetoothGattService) :
 
     override val SelectBluetooth: BluetoothGattCharacteristic =
         writeChar(CommandsUUID.SelectBluetooth)
+    override val ForgetBluetooth: BluetoothGattCharacteristic =
+        writeChar(CommandsUUID.ForgetBluetooth)
 
 //    override val StartBluetoothScan: BluetoothGattCharacteristic =
 //        writeChar(CommandsUUID.StartBluetoothScan)

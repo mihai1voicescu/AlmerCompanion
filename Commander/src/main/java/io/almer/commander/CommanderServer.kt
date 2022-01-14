@@ -281,7 +281,7 @@ class CommanderServer(
                     BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE.contentEquals(value) -> when (uuid) {
                         ListenUUID.WiFi -> enableWifiNotifications()
                         ListenUUID.Bluetooth -> enableBluetoothNotifications()
-                        ListenUUID.ScanBluetooth -> enableScanBluetoothNotifications()
+                        ListenUUID.ScanBluetooth -> enableScanBluetoothNotifications(device)
                     }
 
                     BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE.contentEquals(value) -> {
@@ -316,18 +316,18 @@ class CommanderServer(
             listens.put(ListenUUID.WiFi,
 //                deviceScope.launch {
                 scope.launch {
-                wifiCommander.wifi.collect {
-                    val char = characteristicCommandCatalog.WiFi
+                    wifiCommander.wifi.collect {
+                        val char = characteristicCommandCatalog.WiFi
 
-                    char.value =
-                        Listen.WiFi.serializeResponse(it?.toWiFI())
-                    this@CommanderServer.gattServer?.notifyCharacteristicChanged(
-                        device.value,
-                        char,
-                        false
-                    )
-                }
-            })?.apply { cancel() }
+                        char.value =
+                            Listen.WiFi.serializeResponse(it?.toWiFI())
+                        this@CommanderServer.gattServer?.notifyCharacteristicChanged(
+                            device.value,
+                            char,
+                            false
+                        )
+                    }
+                })?.apply { cancel() }
 
             return NotificationEnableResponse(
                 shouldNotify = true,
@@ -339,21 +339,21 @@ class CommanderServer(
             listens.put(ListenUUID.Bluetooth,
 //                deviceScope.launch {
                 scope.launch {
-                bluetoothCommander.headset.collect {
-                    val char = characteristicCommandCatalog.Bluetooth
+                    bluetoothCommander.headset.collect {
+                        val char = characteristicCommandCatalog.Bluetooth
 
-                    char.value =
-                        Listen.Bluetooth.serializeResponse(
-                            it?.connectedDevices?.firstOrNull()?.toBluetoothDeviceModel(true)
+                        char.value =
+                            Listen.Bluetooth.serializeResponse(
+                                it?.connectedDevices?.firstOrNull()?.toBluetoothDeviceModel(true)
+                            )
+
+                        this@CommanderServer.gattServer?.notifyCharacteristicChanged(
+                            device.value,
+                            char,
+                            false
                         )
-
-                    this@CommanderServer.gattServer?.notifyCharacteristicChanged(
-                        device.value,
-                        char,
-                        false
-                    )
-                }
-            })?.apply { cancel() }
+                    }
+                })?.apply { cancel() }
 
             return NotificationEnableResponse(
                 shouldNotify = true,
@@ -365,27 +365,33 @@ class CommanderServer(
 
         }
 
-        fun enableScanBluetoothNotifications(): NotificationEnableResponse {
-            listens.put(ListenUUID.ScanBluetooth,
-//                deviceScope.launch {
-                scope.launch {
+        fun enableScanBluetoothNotifications(device: BluetoothDevice?): NotificationEnableResponse {
+            val newJob = scope.launch(start = CoroutineStart.LAZY) {
                 bluetoothCommander.scanDevices().collect {
+                    Timber.d("New BluetoothDevice model found")
                     val char = characteristicCommandCatalog.ScanBluetooth
 
                     char.value = Listen.ScanBluetooth.serializeResponse(it)
                     this@CommanderServer.gattServer?.notifyCharacteristicChanged(
-                        device.value,
+                        device,
                         char,
                         false
                     )
                 }
-            })?.apply { cancel() }
-
+            }
+            listens.put(ListenUUID.ScanBluetooth, newJob)?.apply { cancel() }
+            newJob.start()
             return NotificationEnableResponse()
         }
 
         fun disableNotification(uuid: ListenUUID): NotificationEnableResponse {
-            listens.get(uuid)?.cancel()
+            Timber.d("Disabling notifications on $uuid")
+            listens.get(uuid)?.apply {
+                Timber.d("Found active job, disabling it")
+                cancel()
+            } ?: kotlin.run {
+                Timber.d("Did not find active job")
+            }
             return NotificationEnableResponse()
         }
 
@@ -504,7 +510,15 @@ class CommanderServer(
                         request.value
                     )
                 )
-                null -> error("Could not identify request UUID")
+                WriteUUID.ForgetBluetooth -> handleForgetBluetooth(
+                    Write.ForgetBluetooth.deserializeRequest(
+                        request.value
+                    )
+                )
+                null -> {
+                    Timber.w("Could not identify request UUID")
+                    return@onEach
+                }
             }
             gattServer?.sendResponse(request.device, request.requestId, result, 0, value)
         }.launchIn(scope)
@@ -571,6 +585,11 @@ class CommanderServer(
         val isConnected = bluetoothCommander.selectDevice(name)
 
 //        return toGattSuccess(Write.SelectBluetooth.serializeResponse(isConnected))
+        return toGattSuccess()
+    }
+
+    private fun handleForgetBluetooth(name: String): Pair<Int, ByteArray?> {
+        bluetoothCommander.forgetDevice(name)
         return toGattSuccess()
     }
 

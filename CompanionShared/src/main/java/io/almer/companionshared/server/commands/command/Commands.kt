@@ -1,6 +1,7 @@
 package io.almer.companionshared.server.commands.command
 
 import io.almer.companionshared.server.commands.CommandCatalog
+import io.almer.companionshared.server.commands.WriteUUID
 
 object Commands : CommandCatalog<Command> {
     override val ListWiFi = Read.ListWiFi
@@ -10,6 +11,7 @@ object Commands : CommandCatalog<Command> {
     override val ForgetWiFi = Write.ForgetWiFi
     override val ConnectToWifi = Write.ConnectToWifi
     override val SelectBluetooth = Write.SelectBluetooth
+    override val ForgetBluetooth = Write.ForgetBluetooth
 //    override val StartBluetoothScan = Write.StartBluetoothScan
 //    override val StopBluetoothScan = Write.StopBluetoothScan
 

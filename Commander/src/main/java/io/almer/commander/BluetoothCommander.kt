@@ -2,23 +2,23 @@ package io.almer.commander
 
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothHeadset
 import android.bluetooth.BluetoothProfile
+import android.bluetooth.BluetoothProfile.ServiceListener
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.util.Log
+import io.almer.companionshared.model.toBluetoothDeviceModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.delay
-import java.util.concurrent.atomic.AtomicReference
-import android.util.Log
-
-import android.bluetooth.BluetoothHeadset
-import android.bluetooth.BluetoothProfile.ServiceListener
-import io.almer.companionshared.model.toBluetoothDeviceModel
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.*
+import timber.log.Timber
 import java.lang.reflect.Method
+import java.util.concurrent.atomic.AtomicReference
 
 
 typealias BluetoothDeviceModel = io.almer.companionshared.model.BluetoothDevice
@@ -65,7 +65,8 @@ class BluetoothCommander(
 
     init {
         scanHeadset()
-        context.registerReceiver(mReceiver,
+        context.registerReceiver(
+            mReceiver,
             IntentFilter(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED)
 //            Not needed
 //                .apply {
@@ -76,6 +77,10 @@ class BluetoothCommander(
 
     private fun scanHeadset() {
         bluetoothAdapter.getProfileProxy(context, mProfileListener, BluetoothProfile.HEADSET)
+    }
+
+    fun forgetDevice(name: String) {
+        bluetoothAdapter.bondedDevices.firstOrNull { it.name == name }?.removeBond()
     }
 
     suspend fun getBondedDevices(): List<BluetoothDeviceModel> {
@@ -90,7 +95,10 @@ class BluetoothCommander(
         return callbackFlow {
             val receiver = object : BroadcastReceiver() {
 
+                var hasClosed = false
                 override fun onReceive(context: Context, intent: Intent) {
+                    if (hasClosed)
+                        return
                     val action: String? = intent.action
                     when (action) {
                         BluetoothDevice.ACTION_FOUND -> {
@@ -99,7 +107,14 @@ class BluetoothCommander(
                             val device: BluetoothDevice =
                                 intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)!!
 
+                            Timber.d("Found new bluetooth device ${device.name}")
+
                             this@callbackFlow.trySendBlocking(device.toBluetoothDeviceModel())
+                        }
+                        BluetoothAdapter.ACTION_DISCOVERY_FINISHED -> {
+                            hasClosed = true
+                            Timber.d("Discovery has stopped")
+                            this@callbackFlow.close()
                         }
                     }
                 }
@@ -109,33 +124,36 @@ class BluetoothCommander(
 
             context.registerReceiver(
                 receiver,
-                IntentFilter(BluetoothDevice.ACTION_FOUND)
+                IntentFilter(BluetoothDevice.ACTION_FOUND).apply {
+                    addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED)
+                }
             )
 
-            delay(12_000)
+//            delay(12_000)
 //            delay(1_000)
-            close()
+//            close()
+
+            Timber.d("Start scanning for bluetooth devices")
+            bluetoothAdapter.startDiscovery()
             awaitClose {
+                Timber.d("Scan for bluetooth devices finished")
+                bluetoothAdapter.cancelDiscovery()
                 context.unregisterReceiver(toRemove.get())
+                Timber.d("Scan for bluetooth devices cleaned")
             }
         }.buffer(10)
     }
 
 
     fun selectDevice(name: String): Boolean {
-        /*
-         * Unfortunately this requires access to non-public API
-         *
-         * Method is here https://cs.android.com/android/platform/superproject/+/master:frameworks/base/core/java/android/bluetooth/BluetoothHeadset.java;l=480?q=BluetoothHeadse&ss=android%2Fplatform%2Fsuperproject
-         */
+
         val headset = headset.value ?: return false
-        val method: Method = headset.javaClass.getMethod("connect", BluetoothDevice::class.java)
 
         val device = bluetoothAdapter.bondedDevices.first {
             it.name == name
         } ?: return false
 
-        method.invoke(headset, device)
+        headset.connect(device)
 
         return true
     }

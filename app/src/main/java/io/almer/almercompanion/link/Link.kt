@@ -1,34 +1,43 @@
 package io.almer.almercompanion.link
 
+import android.bluetooth.BluetoothGattDescriptor
 import android.content.Context
 import android.net.wifi.WifiInfo
 import android.os.Build
-import com.juul.kable.AndroidPeripheral
-import com.juul.kable.Peripheral
-import com.juul.kable.WriteType
-import com.juul.kable.characteristicOf
+import com.juul.kable.*
 import io.almer.companionshared.model.BluetoothDevice
 import io.almer.companionshared.model.WiFi
 import io.almer.companionshared.model.WifiConnectionInfo
 import io.almer.companionshared.server.commands.ClientCommandCatalog
 import io.almer.companionshared.server.MESSAGE_UUID
 import io.almer.companionshared.server.SERVICE_UUID
+import io.almer.companionshared.server.commands.CCCD
 import io.almer.companionshared.server.commands.ReadUUID
 import io.almer.companionshared.server.commands.command.Commands
 import io.almer.companionshared.server.commands.command.Listen
 import io.almer.companionshared.server.commands.command.Write
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import timber.log.Timber
+import java.time.Instant
 import kotlin.RuntimeException
 
 val UNKNOWN_WIFI = WiFi(name = "UNKNOWN", ssid = "UNKNOWN", 0, null)
 val UNKNOWN_BLUETOOTH = BluetoothDevice(name = "UNKNOWN", isPaired = true, "")
+
+fun DiscoveredCharacteristic.cccd() = descriptors.firstOrNull { it.descriptorUuid == CCCD }
+
+suspend fun Peripheral.disableListen(characteristic: DiscoveredCharacteristic) {
+    characteristic.cccd()?.let {
+        write(it, BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE)
+    }
+}
 
 @OptIn(ExperimentalSerializationApi::class)
 class Link private constructor(
@@ -135,10 +144,19 @@ class Link private constructor(
     fun scanBluetooth(): Flow<BluetoothDevice> {
         return peripheral.observe(catalog.ScanBluetooth)
             .map { Listen.ScanBluetooth.deserializeResponse(it) }
+            .onCompletion {
+                scope.launch {
+                    peripheral.disableListen(catalog.ScanBluetooth)
+                }
+            }
     }
 
     suspend fun selectBluetooth(name: String) {
         peripheral.write(catalog.SelectBluetooth, Write.SelectBluetooth.serializeRequest(name))
+    }
+
+    suspend fun forgetBluetooth(name: String) {
+        peripheral.write(catalog.ForgetBluetooth, Write.ForgetBluetooth.serializeRequest(name))
     }
 
     companion object {

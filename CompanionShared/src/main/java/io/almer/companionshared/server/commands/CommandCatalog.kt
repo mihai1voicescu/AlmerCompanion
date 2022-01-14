@@ -10,6 +10,7 @@ interface WriteCatalog<Type> {
     val ForgetWiFi: Type
     val ConnectToWifi: Type
     val SelectBluetooth: Type
+    val ForgetBluetooth: Type
 //    val StartBluetoothScan: Type
 //    val StopBluetoothScan: Type
 }

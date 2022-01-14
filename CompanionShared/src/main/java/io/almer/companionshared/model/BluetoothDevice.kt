@@ -13,7 +13,7 @@ data class BluetoothDevice(
 
 @SuppressLint("MissingPermission")
 fun BluetoothDevice.toBluetoothDeviceModel(isPaired: Boolean = true) = BluetoothDevice(
-    name = name,
+    name = name ?: address ?: "Unknown",
     isPaired = isPaired,
     uuid = null
 )

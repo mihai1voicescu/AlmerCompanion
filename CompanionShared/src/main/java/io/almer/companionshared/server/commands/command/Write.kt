@@ -43,6 +43,15 @@ sealed class Write<Request, Response>(
         override val uuid = WriteUUID.SelectBluetooth.uuid
     }
 
+    object ForgetBluetooth : Write<String, Boolean>() {
+        override fun serializeRequest(request: String): ByteArray = serialize(request)
+        override fun deserializeRequest(byteArray: ByteArray): String = deserialize(byteArray)
+
+        //        override fun serializeResponse(response: Boolean): ByteArray = serialize(response)
+//        override fun deserializeResponse(byteArray: ByteArray): Boolean = deserialize(byteArray)
+        override val uuid = WriteUUID.ForgetBluetooth.uuid
+    }
+
 //
 //    object StartBluetoothScan : Write<Unit, Unit>() {
 //        override fun serializeRequest(request: Unit): ByteArray = serialize(request)

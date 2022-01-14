@@ -1,12 +1,14 @@
 package io.almer.almercompanion.screen
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -22,7 +24,7 @@ import io.almer.almercompanion.composable.text.BodyText
 import io.almer.almercompanion.safePopBackStack
 import io.almer.companionshared.model.BluetoothDevice
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.toCollection
+import kotlinx.coroutines.flow.*
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -40,9 +42,21 @@ fun BluetoothScreen() {
     fun startScan() {
         if (scanningJob == null) {
             scanDevices.clear()
-            scanningJob = scope.launch {
-                app.link.scanBluetooth().toCollection(scanDevices)
-                scanningJob = null
+
+            val localJob = app.link.scanBluetooth()
+                .onEach {
+                    scanDevices.add(it)
+                }
+                .onCompletion {
+                    scanningJob = null
+                }
+                .launchIn(scope)
+
+            scanningJob = localJob
+
+            scope.launch {
+                delay(13_000)
+                if (localJob.isActive) localJob.cancel()
             }
         }
     }
@@ -57,6 +71,12 @@ fun BluetoothScreen() {
             app.link.selectBluetooth(device.name)
             toggle()
             navController.safePopBackStack()
+        }
+    }
+
+    fun onForgetSelect(device: BluetoothDevice) {
+        scope.launch {
+            app.link.forgetBluetooth(device.name)
         }
     }
 
@@ -84,7 +104,10 @@ fun BluetoothScreen() {
 
                 app.link.pairedDevices()
             }
-        ) {
+        ) { _list ->
+            val list = remember {
+                mutableStateListOf(*_list.toTypedArray())
+            }
 
             SubmitView { toggle ->
                 LazyColumn {
@@ -102,11 +125,23 @@ fun BluetoothScreen() {
                         }
                     }
 //                    item { Divider() }
-                    it.map { bluetoothDevice ->
+                    list.map { bluetoothDevice ->
                         itemSelector(element = bluetoothDevice, onSelect = {
                             onSelect(bluetoothDevice, toggle = toggle)
                         }) {
-                            BodyText(it.name)
+                            Row {
+                                BodyText(it.name, modifier = Modifier.weight(1f))
+
+                                IconButton(onClick = {
+                                    list.remove(it)
+                                    onForgetSelect(it)
+                                }) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_baseline_remove_24),
+                                        contentDescription = "Remove"
+                                    )
+                                }
+                            }
                         }
                     }
                     item { Divider(Modifier.padding(top = 20.dp), thickness = 3.dp) }

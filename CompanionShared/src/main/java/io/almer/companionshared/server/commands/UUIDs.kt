@@ -3,7 +3,6 @@ package io.almer.companionshared.server.commands
 import java.util.*
 
 /*
-99c8f16c-f4b5-4d35-a29a-66bdde2e2ac4
 9d73ed7a-c884-4082-aa92-a292f061d6d0
 5f961fef-8385-46cc-9e9f-653ef5d2ac4b
 b0ea0c81-cf09-4b9e-bed8-69b5287d6180
@@ -31,6 +30,7 @@ enum class WriteUUID(val uuid: UUID) {
     ForgetWiFi(UUID.fromString("0cb77972-89cb-4ba7-9a2e-a0438eafdee3")),
     ConnectToWifi(UUID.fromString("228d48b8-6fc1-4a1e-8ba8-f456cc6f1535")),
     SelectBluetooth(UUID.fromString("3d044f39-ac57-4c6e-808a-0c845a2b0376")),
+    ForgetBluetooth(UUID.fromString("99c8f16c-f4b5-4d35-a29a-66bdde2e2ac4")),
 //    StartBluetoothScan(UUID.fromString("765a7fab-8b60-4684-8593-9f44cc058f6a")),
 //    StopBluetoothScan(UUID.fromString("3d74b4a5-7673-4d9c-a158-cd3b0b330c6a")),
 }
@@ -41,6 +41,7 @@ fun writeUUID(uuid: UUID): WriteUUID? {
         WriteUUID.ForgetWiFi.uuid -> WriteUUID.ForgetWiFi
         WriteUUID.ConnectToWifi.uuid -> WriteUUID.ConnectToWifi
         WriteUUID.SelectBluetooth.uuid -> WriteUUID.SelectBluetooth
+        WriteUUID.ForgetBluetooth.uuid -> WriteUUID.ForgetBluetooth
 //        WriteUUID.StartBluetoothScan.uuid -> WriteUUID.StartBluetoothScan
 //        WriteUUID.StopBluetoothScan.uuid -> WriteUUID.StopBluetoothScan
         else -> null
@@ -70,7 +71,8 @@ object CommandsUUID : CommandCatalog<UUID> {
     override val ForgetWiFi: UUID = WriteUUID.ForgetWiFi.uuid
     override val ConnectToWifi: UUID = WriteUUID.ConnectToWifi.uuid
     override val SelectBluetooth: UUID = WriteUUID.SelectBluetooth.uuid
-//    override val StartBluetoothScan: UUID = WriteUUID.StartBluetoothScan.uuid
+    override val ForgetBluetooth: UUID = WriteUUID.ForgetBluetooth.uuid
+//    override val StopBluetoothScan: UUID = WriteUUID.StopBluetoothScan.uuid    override val StartBluetoothScan: UUID = WriteUUID.StartBluetoothScan.uuid
 //    override val StopBluetoothScan: UUID = WriteUUID.StopBluetoothScan.uuid
 
     override val WiFi: UUID = ListenUUID.WiFi.uuid
