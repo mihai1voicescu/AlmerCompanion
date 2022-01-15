@@ -28,8 +28,9 @@ import io.almer.companionshared.model.WiFi
 import io.almer.almercompanion.safePopBackStack
 import io.almer.companionshared.model.WifiConnectionInfo
 import kotlinx.coroutines.*
-import timber.log.Timber
+import org.lighthousegames.logging.logging
 
+private val Log = logging("WiFiScreen")
 
 @Composable
 @Preview
@@ -75,7 +76,7 @@ private fun SelectWiFi() {
         connectWifi?.let { wifi ->
             WiFiPasswordDialog(
                 ssid = wifi.ssid,
-                wifi= wifi,
+                wifi = wifi,
                 onClose = {
                     navController.popBackStack()
                 },
@@ -241,11 +242,11 @@ private fun SelectWiFiListView(
         return
     }
 
-    Timber.d("Available Wifi: %s", options)
+    Log.d { "Available Wifi: $options" }
     val known = options.filter { it.isKnow }
     val unknown = options.filter { !it.isKnow }
-    Timber.d("Known Wifi: %s", known)
-    Timber.d("Unknown Wifi: %s", unknown)
+    Log.d { "Known Wifi: $known" }
+    Log.d { "Unknown Wifi: $unknown" }
 
     SubmitView { toggle ->
         LazyColumn {

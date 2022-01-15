@@ -1,30 +1,14 @@
 package io.almer.companionshared.server
 
-import android.Manifest
-import android.bluetooth.*
-import android.bluetooth.BluetoothDevice
 import android.bluetooth.le.*
 import android.content.Context
-import android.content.pm.PackageManager
 import android.os.ParcelUuid
-import androidx.core.app.ActivityCompat
 import com.juul.kable.Advertisement
 import com.juul.kable.ObsoleteKableApi
-import com.juul.kable.Peripheral
 import com.juul.kable.Scanner
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.ConflatedBroadcastChannel
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.*
-import timber.log.Timber
 
-
-private const val TAG = "DeviceScanViewModel"
-
-// 30 second scan period
-private const val SCAN_PERIOD = 30000L
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DeviceScan(

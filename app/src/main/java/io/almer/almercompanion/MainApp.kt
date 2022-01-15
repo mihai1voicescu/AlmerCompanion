@@ -18,24 +18,32 @@ import androidx.core.app.ActivityCompat.startIntentSenderForResult
 import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
+import com.google.firebase.analytics.FirebaseAnalytics
+import com.google.firebase.analytics.ktx.analytics
+import com.google.firebase.ktx.Firebase
 import com.juul.kable.Advertisement
 import com.juul.kable.AndroidPeripheral
 import com.juul.kable.Peripheral
 import com.juul.kable.peripheral
 import io.almer.almercompanion.link.Link
+import io.almer.companionshared.CrashlyticsLogger
 import io.almer.companionshared.server.DeviceScan
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.plus
-import timber.log.Timber
+import org.lighthousegames.logging.KmLogging
+import org.lighthousegames.logging.LogLevelController
+import org.lighthousegames.logging.PlatformLogger
 import java.util.*
 import java.util.regex.Pattern
 
 const val SELECT_DEVICE_REQUEST_CODE = 42
 
 class MainApp : Application() {
+
+    private lateinit var analytics: FirebaseAnalytics
 
     val settings by lazy {
         AppSettings(this)
@@ -73,16 +81,19 @@ class MainApp : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        Timber.plant(Timber.DebugTree())
+        KmLogging.addLogger(CrashlyticsLogger())
+        analytics = Firebase.analytics
+        KmLogging.setLoggers(PlatformLogger(object : LogLevelController {
+            override fun isLoggingDebug() = true
 
-//        _link = Link(this)
+            override fun isLoggingError() = true
 
-        val deviceFilter: BluetoothDeviceFilter = BluetoothDeviceFilter.Builder()
-            // Match only Bluetooth devices whose name matches the pattern.
-            .setNamePattern(Pattern.compile("My device"))
-            // Match only Bluetooth devices whose service UUID matches this pattern.
-            .addServiceUuid(ParcelUuid(UUID(0x123abcL, -1L)), null)
-            .build()
+            override fun isLoggingInfo() = true
+
+            override fun isLoggingVerbose() = false
+
+            override fun isLoggingWarning() = true
+        }))
     }
 
     companion object {

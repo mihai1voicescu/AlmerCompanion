@@ -14,10 +14,8 @@ import io.almer.companionshared.model.toBluetoothDeviceModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.channels.trySendBlocking
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
-import timber.log.Timber
-import java.lang.reflect.Method
+import org.lighthousegames.logging.logging
 import java.util.concurrent.atomic.AtomicReference
 
 
@@ -28,6 +26,10 @@ const val TAG = "BluetoothCommander"
 class BluetoothCommander(
     val context: Context
 ) : AutoCloseable {
+
+    companion object {
+        val Log = logging()
+    }
 
     val bluetoothAdapter =
         BluetoothAdapter.getDefaultAdapter() ?: error("Device does not support Bluetooth")
@@ -47,7 +49,7 @@ class BluetoothCommander(
 
         override fun onServiceDisconnected(profile: Int) {
             if (profile == BluetoothProfile.HEADSET) {
-                Log.d(TAG, "[Bluetooth] Headset disconnected")
+                Log.d { "Headset disconnected" }
             }
         }
     }
@@ -107,13 +109,13 @@ class BluetoothCommander(
                             val device: BluetoothDevice =
                                 intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)!!
 
-                            Timber.d("Found new bluetooth device ${device.name}")
+                            Log.d { "Found new bluetooth device ${device.name}" }
 
                             this@callbackFlow.trySendBlocking(device.toBluetoothDeviceModel())
                         }
                         BluetoothAdapter.ACTION_DISCOVERY_FINISHED -> {
                             hasClosed = true
-                            Timber.d("Discovery has stopped")
+                            Log.d { "Discovery has stopped" }
                             this@callbackFlow.close()
                         }
                     }
@@ -133,13 +135,13 @@ class BluetoothCommander(
 //            delay(1_000)
 //            close()
 
-            Timber.d("Start scanning for bluetooth devices")
+            Log.d { "Start scanning for bluetooth devices" }
             bluetoothAdapter.startDiscovery()
             awaitClose {
-                Timber.d("Scan for bluetooth devices finished")
+                Log.d { "Scan for bluetooth devices finished" }
                 bluetoothAdapter.cancelDiscovery()
                 context.unregisterReceiver(toRemove.get())
-                Timber.d("Scan for bluetooth devices cleaned")
+                Log.d { "Scan for bluetooth devices cleaned" }
             }
         }.buffer(10)
     }

@@ -3,17 +3,14 @@ package io.almer.comanderdebug
 import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
-import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.annotation.RequiresPermission
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
-import androidx.core.app.ActivityCompat
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionsRequired
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
@@ -21,7 +18,10 @@ import io.almer.comanderdebug.MainActivity.Companion.mainActivity
 import io.almer.comanderdebug.ui.theme.AlmerCompanionTheme
 import io.almer.commander.CommanderServer
 import io.almer.companionshared.server.DeviceScan
-import timber.log.Timber
+import org.lighthousegames.logging.KmLogging
+import org.lighthousegames.logging.LogLevelController
+import org.lighthousegames.logging.PlatformLogger
+import org.lighthousegames.logging.logging
 
 @OptIn(ExperimentalPermissionsApi::class)
 class MainActivity : ComponentActivity() {
@@ -37,7 +37,18 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        Timber.plant(Timber.DebugTree())
+        KmLogging.setLoggers(PlatformLogger(object : LogLevelController {
+            override fun isLoggingDebug() = true
+
+            override fun isLoggingError() = true
+
+            override fun isLoggingInfo() = true
+
+            override fun isLoggingVerbose() = false
+
+            override fun isLoggingWarning() = true
+        }))
+
         commanderServer = CommanderServer(this)
 
         setContent {
@@ -76,6 +87,7 @@ class MainActivity : ComponentActivity() {
     }
 
     companion object {
+        val Log = logging()
         @Composable
         fun mainActivity(): MainActivity {
             return LocalContext.current as MainActivity

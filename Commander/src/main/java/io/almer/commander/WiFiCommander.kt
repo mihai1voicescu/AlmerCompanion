@@ -11,8 +11,7 @@ import android.net.*
 import android.net.ConnectivityManager.NetworkCallback
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import timber.log.Timber
-import android.R.attr.name
+import org.lighthousegames.logging.logging
 
 fun Boolean.successString(): String = if (this) "successful" else "unsuccessful"
 
@@ -63,12 +62,14 @@ class WiFiCommander private constructor(
             )
         }
 
-        Timber.d("Wifis: %s", wifis)
+        Log.d { "Wifis: $wifis" }
         return wifis
     }
 
 
     companion object {
+        val Log = logging()
+
         operator fun invoke(context: Context): WiFiCommander {
             val wifiCommanderDelegate =
 //                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -155,14 +156,14 @@ class WiFiCommander private constructor(
         val list = configuredNetworks()
         for (i in list) {
             val isRemoved = wifiManager.removeNetwork(i.networkId)
-            Timber.d("Wifi %s removal was %s", i.SSID, isRemoved.successString())
+            Log.d { "Wifi ${i.SSID} removal was ${isRemoved.successString()}" }
             wifiManager.saveConfiguration()
         }
     }
 
     fun disableWifi(networkId: Int) {
         val isDisabled = wifiManager.disableNetwork(networkId)
-        Timber.d("Wifi %s disabling was %s", networkId, isDisabled.successString())
+        Log.d { "Wifi $networkId disabling was ${isDisabled.successString()}" }
     }
 
     fun killWifi() {

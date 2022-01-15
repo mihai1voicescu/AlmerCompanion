@@ -2,8 +2,6 @@ package io.almer.almercompanion.link
 
 import android.bluetooth.BluetoothGattDescriptor
 import android.content.Context
-import android.net.wifi.WifiInfo
-import android.os.Build
 import com.juul.kable.*
 import io.almer.companionshared.model.BluetoothDevice
 import io.almer.companionshared.model.WiFi
@@ -12,20 +10,15 @@ import io.almer.companionshared.server.commands.ClientCommandCatalog
 import io.almer.companionshared.server.MESSAGE_UUID
 import io.almer.companionshared.server.SERVICE_UUID
 import io.almer.companionshared.server.commands.CCCD
-import io.almer.companionshared.server.commands.ReadUUID
 import io.almer.companionshared.server.commands.command.Commands
 import io.almer.companionshared.server.commands.command.Listen
 import io.almer.companionshared.server.commands.command.Write
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.json.Json
-import timber.log.Timber
-import java.time.Instant
+import org.lighthousegames.logging.logging
 import kotlin.RuntimeException
 
 val UNKNOWN_WIFI = WiFi(name = "UNKNOWN", ssid = "UNKNOWN", 0, null)
@@ -160,27 +153,29 @@ class Link private constructor(
     }
 
     companion object {
+        val Log = logging()
+
         suspend operator fun invoke(
             context: Context,
             peripheral: AndroidPeripheral,
             scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
         ): Link {
-            Timber.i("Peripheral: creating")
+            Log.i { "Peripheral: creating" }
 
             peripheral.state.onEach {
-                Timber.i("Peripheral: state: %s", it)
+                Log.i { "Peripheral: state: $it" }
             }.launchIn(scope)
 
-            Timber.i("Peripheral: connecting")
+            Log.i { "Peripheral: connecting" }
             peripheral.connect()
-            Timber.i("Peripheral: connected")
+            Log.i { "Peripheral: connected" }
 
-            Timber.i("Successfully selected current peripheral: %s", peripheral)
+            Log.i { "Successfully selected current peripheral: $peripheral" }
 
 
-            Timber.i("Setting the new MTU to 512")
+            Log.i { "Setting the new MTU to 512" }
             val newMtu = peripheral.requestMtu(512)
-            Timber.i("MTU set to $newMtu")
+            Log.i { "MTU set to $newMtu" }
 
             val link = Link(context, peripheral, scope)
 

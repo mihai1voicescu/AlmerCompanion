@@ -9,12 +9,16 @@ import io.almer.companionshared.server.SERVICE_UUID
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.flow.*
-import timber.log.Timber
+import org.lighthousegames.logging.logging
 
 class CommanderConnector(
     val context: Context,
     val scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
 ) {
+
+    companion object {
+        val Log = logging()
+    }
 
     // BluetoothAdapter should never be null if the app is installed from the Play store
     // since BLE is required per the <uses-feature> tag in the AndroidManifest.xml.
@@ -48,44 +52,44 @@ class CommanderConnector(
 ////    fun getYourDeviceAddress(): String = bluetoothManager.adapter.address
 
     suspend fun setCurrentChatConnection(device: BluetoothDevice) {
-        Timber.i("Peripheral: creating")
+        Log.i { "Peripheral: creating" }
         val peripheral = scope.peripheral(device) {
             this.logging {
                 level = Logging.Level.Events
             }
             this.onServicesDiscovered {
-                Timber.i("Successfully discovered services")
+                Log.i { "Successfully discovered services" }
             }
         }
 
         peripheral.state.onEach {
-            Timber.i("Peripheral: state: %s", it)
+            Log.i { "Peripheral: state: $it" }
         }.launchIn(scope)
 
-        Timber.i("Peripheral: connecting")
+        Log.i { "Peripheral: connecting" }
         peripheral.connect()
-        Timber.i("Peripheral: connected")
+        Log.i { "Peripheral: connected" }
 
-        Timber.i("Peripheral: discover services")
+        Log.i { "Peripheral: discover services" }
         val service = peripheral.services!!.first {
             it.serviceUuid == SERVICE_UUID
         }
 
-        Timber.i("Peripheral: discover char")
+        Log.i { "Peripheral: discover char" }
         val char = service.characteristics.first {
             it.characteristicUuid == MESSAGE_UUID
         }
 
-        Timber.i("Peripheral: setting vars")
+        Log.i { "Peripheral: setting vars" }
         messageCharacteristic = char
 
         _currentPeripheral.value = peripheral
 
-        Timber.i("Successfully selected current peripheral: %s", _currentPeripheral.value)
+        Log.i { "Successfully selected current peripheral: ${_currentPeripheral.value}" }
     }
 
     suspend fun sendMessage(message: String): Boolean {
-        Timber.d("Send a message")
+        Log.d { "Send a message" }
 
         currentPeripheral.value?.let { periferal ->
             scope.launch {
