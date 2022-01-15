@@ -13,8 +13,8 @@ android {
         applicationId "io.almer.almercompanion"
         minSdk 28
         targetSdk 31
-        versionCode 3
-        versionName "1.0.3"
+        versionCode 4
+        versionName "1.0.4"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

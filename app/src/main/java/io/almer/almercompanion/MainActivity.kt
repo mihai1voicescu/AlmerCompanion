@@ -11,15 +11,18 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.google.accompanist.permissions.*
 import com.juul.kable.Advertisement
-import com.juul.kable.peripheral
+import com.juul.kable.State
 import io.almer.almercompanion.MainApp.Companion.mainApp
 import io.almer.almercompanion.composable.select.ListSelector
-import io.almer.almercompanion.link.Link
 import io.almer.almercompanion.screen.*
 import io.almer.almercompanion.ui.theme.AlmerCompanionTheme
 import kotlinx.coroutines.InternalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import org.lighthousegames.logging.logging
+
+val Log = logging("MainActivity")
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -66,10 +69,31 @@ fun DebugGuard() {
         permissionsNotAvailableContent = {
             Text("Device does not have the required permissions")
         }) {
-        LinkEnsure()
+        BluetoothGuard()
     }
 }
 
+
+@Composable
+fun BluetoothGuard() {
+
+    val bluetoothState by mainApp().bluetoothState.collectAsState()
+
+    when (bluetoothState) {
+        BluetoothState.Unknown -> Text("Bluetooth state is currently unknown, please wait")
+        BluetoothState.NotSupported -> Text("Device does not support Bluetooth")
+        BluetoothState.Off -> Text("Bluetooth is not enabled, please enable it")
+        BluetoothState.On -> LinkEnsure()
+    }
+}
+
+class ResetState {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+
+        return false
+    }
+}
 
 @OptIn(InternalCoroutinesApi::class)
 @Composable
@@ -79,18 +103,32 @@ fun LinkEnsure() {
     val scope = rememberCoroutineScope()
     val link by app.linkState.collectAsState()
 
+    var resetState by remember {
+        mutableStateOf(ResetState())
+    }
+
     val advertisers = remember {
         mutableStateMapOf<String, Advertisement>()
     }
 
-    if (link == null) {
-        LaunchedEffect(true) {
+    var scanJob by remember {
+        mutableStateOf<Job?>(null)
+    }
+
+    val currentLink = link
+    if (currentLink == null) {
+        LaunchedEffect(resetState) {
             advertisers.clear()
-            scope.launch {
-                app.deviceScan.scan().collect {
-                    advertisers[it.address] = it
-                }
-            }
+
+            // ensure we start fresh
+            assert(advertisers.size == 0)
+
+            Log.i { "Start scanning" }
+            scanJob = app.deviceScan.scan().onEach {
+                Log.d { "Found new device ${it.name ?: it.address} with ${it.txPower}" }
+                advertisers[it.name ?: it.address] = it
+            }.launchIn(scope)
+
         }
 
         Scaffold(topBar = {
@@ -100,14 +138,43 @@ fun LinkEnsure() {
         }) {
             ListSelector(items = advertisers.values, onSelect = {
                 scope.launch {
-                    app.selectDevice(it)
+                    try {
+                        app.selectDevice(it)
+                    } catch (e: Exception) {
+                        Log.e(e) { "Unable to connect to device" }
+                    }
                 }
             }) {
                 Text(it.name ?: it.address)
             }
         }
     } else {
-        NavigationBootstrap()
+
+        val linkState by currentLink.state.collectAsState()
+
+        scanJob?.apply {
+            if (isActive) {
+                Log.i { "Stop scanning" }
+                cancel()
+            }
+        }
+
+        when (linkState) {
+            State.Connecting.Bluetooth -> Text("Link Connecting")
+            State.Connecting.Services -> Text("Link Connecting")
+            State.Connecting.Observes -> Text("Link Connecting")
+            State.Connected -> NavigationBootstrap()
+            State.Disconnecting -> Text("Link Disconnecting")
+            is State.Disconnected -> {
+                advertisers.clear()
+                LaunchedEffect(scanJob) {
+                    Log.i { "Resting the state" }
+                    resetState = ResetState()
+                    app.disconnectPeripheral()
+                }
+                Text("Link Disconnected")
+            }
+        }
     }
 }
 

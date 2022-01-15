@@ -2,14 +2,15 @@ package io.almer.almercompanion
 
 import android.app.Application
 import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
 import android.bluetooth.le.ScanFilter
 import android.companion.*
-import android.content.Context
-import android.content.IntentSender
+import android.content.*
 import android.net.ConnectivityManager
 import android.net.NetworkInfo
 import android.os.ParcelUuid
 import androidx.annotation.MainThread
+import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
@@ -26,10 +27,13 @@ import com.juul.kable.AndroidPeripheral
 import com.juul.kable.Peripheral
 import com.juul.kable.peripheral
 import io.almer.almercompanion.link.Link
+import io.almer.commander.BluetoothCommander
 import io.almer.companionshared.CrashlyticsLogger
+import io.almer.companionshared.model.toBluetoothDeviceModel
 import io.almer.companionshared.server.DeviceScan
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.plus
@@ -40,6 +44,13 @@ import java.util.*
 import java.util.regex.Pattern
 
 const val SELECT_DEVICE_REQUEST_CODE = 42
+
+enum class BluetoothState {
+    Unknown,
+    NotSupported,
+    Off,
+    On
+}
 
 class MainApp : Application() {
 
@@ -94,6 +105,8 @@ class MainApp : Application() {
 
             override fun isLoggingWarning() = true
         }))
+
+        listen()
     }
 
     companion object {
@@ -101,6 +114,48 @@ class MainApp : Application() {
         @Composable
         fun mainApp(): MainApp {
             return LocalContext.current.applicationContext!! as MainApp
+        }
+    }
+
+
+    val _bluetoothState = MutableStateFlow(BluetoothState.Unknown)
+    val bluetoothState = _bluetoothState.asStateFlow()
+
+    fun listen() {
+        val receiver = object : BroadcastReceiver() {
+            var hasClosed = false
+            override fun onReceive(context: Context, intent: Intent) {
+                if (hasClosed)
+                    return
+                val action: String? = intent.action
+                when (action) {
+
+                    BluetoothAdapter.ACTION_STATE_CHANGED -> {
+                        _bluetoothState.value = getCurrentBluetoothState()
+                    }
+                }
+            }
+        }
+        this.registerReceiver(
+            receiver,
+            IntentFilter(BluetoothDevice.ACTION_FOUND).apply {
+                addAction(BluetoothAdapter.ACTION_STATE_CHANGED)
+            }
+        )
+
+        _bluetoothState.value = getCurrentBluetoothState()
+    }
+
+    fun getCurrentBluetoothState(): BluetoothState {
+        val mBluetoothAdapter: BluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
+        if (mBluetoothAdapter == null) {
+            return BluetoothState.NotSupported
+        } else if (!mBluetoothAdapter.isEnabled()) {
+            // Bluetooth is not enabled :)
+            return BluetoothState.Off
+        } else {
+            // Bluetooth is enabled
+            return BluetoothState.On
         }
     }
 }

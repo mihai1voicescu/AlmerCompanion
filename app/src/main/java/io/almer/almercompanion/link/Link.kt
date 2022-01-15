@@ -47,6 +47,8 @@ class Link private constructor(
     val bluetooth: StateFlow<BluetoothDevice?> = _bluetooth
     val messageCharacteristic = characteristicOf(SERVICE_UUID.toString(), MESSAGE_UUID.toString())
 
+    val state = peripheral.state.stateIn(scope, SharingStarted.Eagerly, State.Connecting.Bluetooth)
+
     suspend fun sendMessage(message: String) {
         scope.launch {
             val messageBytes = message.toByteArray(Charsets.UTF_8)
