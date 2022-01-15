@@ -4,10 +4,7 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.material.Card
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
+import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -96,12 +93,18 @@ fun LinkEnsure() {
             }
         }
 
-        ListSelector(items = advertisers.values, onSelect = {
-            scope.launch {
-                app.selectDevice(it)
+        Scaffold(topBar = {
+            TopAppBar {
+                Text("Scanning for Almer devices")
             }
         }) {
-            Text(it.name ?: it.address)
+            ListSelector(items = advertisers.values, onSelect = {
+                scope.launch {
+                    app.selectDevice(it)
+                }
+            }) {
+                Text(it.name ?: it.address)
+            }
         }
     } else {
         NavigationBootstrap()
