@@ -3,6 +3,7 @@ package io.almer.comanderdebug
 import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -26,14 +27,6 @@ import org.lighthousegames.logging.logging
 @OptIn(ExperimentalPermissionsApi::class)
 class MainActivity : ComponentActivity() {
 
-    val deviceScan = DeviceScan(this)
-    lateinit var commanderServer: CommanderServer
-
-    override fun onDestroy() {
-        super.onDestroy()
-        commanderServer.close()
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -49,7 +42,6 @@ class MainActivity : ComponentActivity() {
             override fun isLoggingWarning() = true
         }))
 
-        commanderServer = CommanderServer(this)
 
         setContent {
             AlmerCompanionTheme {
@@ -79,6 +71,9 @@ class MainActivity : ComponentActivity() {
                         permissionsNotAvailableContent = {
                             Text("Device does not have the required permissions")
                         }) {
+                        val intent = Intent(this, CommanderService::class.java) // Build the intent for the service
+
+                        applicationContext.startService(intent)
                         Main()
                     }
                 }
@@ -102,13 +97,15 @@ fun getName(device: BluetoothDevice): String? {
 
 @Composable
 fun Main() {
-    val act = mainActivity()
+//    val act = mainActivity()
 
-    val device by act.commanderServer.device.collectAsState()
+    Text("Online")
 
-    device?.let { device ->
-        Text(getName(device) ?: device.address)
-    } ?: run {
-        Text("Not connected")
-    }
+//    val device by act.commanderServer.device.collectAsState()
+//
+//    device?.let { device ->
+//        Text(getName(device) ?: device.address)
+//    } ?: run {
+//        Text("Not connected")
+//    }
 }
