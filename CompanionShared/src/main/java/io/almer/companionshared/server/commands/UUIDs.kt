@@ -3,7 +3,6 @@ package io.almer.companionshared.server.commands
 import java.util.*
 
 /*
-9d73ed7a-c884-4082-aa92-a292f061d6d0
 5f961fef-8385-46cc-9e9f-653ef5d2ac4b
 b0ea0c81-cf09-4b9e-bed8-69b5287d6180
 817a799a-561c-4452-b077-99e8ea84a128
@@ -15,12 +14,14 @@ f2cd7407-d430-4b95-a525-e4c08a6a94e1
 enum class ReadUUID(val uuid: UUID) {
     ListWiFi(UUID.fromString("7fa37eab-d654-4b1f-b271-9532027cf660")),
     PairedDevices(UUID.fromString("737b58f2-8e11-43da-bbc2-65c9ce0d07aa")),
+    CallLink(UUID.fromString("9d73ed7a-c884-4082-aa92-a292f061d6d0"))
 }
 
 fun readUUID(uuid: UUID): ReadUUID? {
     return when (uuid) {
         ReadUUID.ListWiFi.uuid -> ReadUUID.ListWiFi
         ReadUUID.PairedDevices.uuid -> ReadUUID.PairedDevices
+        ReadUUID.CallLink.uuid -> ReadUUID.CallLink
         else -> null
     }
 }
@@ -66,6 +67,7 @@ fun listenUUID(uuid: UUID): ListenUUID? {
 object CommandsUUID : CommandCatalog<UUID> {
     override val ListWiFi: UUID = ReadUUID.ListWiFi.uuid
     override val PairedDevices: UUID = ReadUUID.PairedDevices.uuid
+    override val CallLink: UUID = ReadUUID.CallLink.uuid
 
     override val SelectWiFi: UUID = WriteUUID.SelectWiFi.uuid
     override val ForgetWiFi: UUID = WriteUUID.ForgetWiFi.uuid

@@ -42,6 +42,8 @@ class CommanderServer(
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
 ) : AutoCloseable {
 
+    val appSettings by lazy { AppSettings(context.getSharedPreferences("app", Context.MODE_PRIVATE)) }
+
     companion object {
         val Log = logging()
     }
@@ -534,6 +536,7 @@ class CommanderServer(
             val (result, value) = when (readUUID(uuid)) {
                 ReadUUID.ListWiFi -> handleListWifi()
                 ReadUUID.PairedDevices -> handlePairedDevices()
+                ReadUUID.CallLink -> handleCallLink()
                 null -> {
                     when (listenUUID(uuid)) {
                         ListenUUID.WiFi -> toGattSuccess(Listen.WiFi.serializeResponse(wifiCommander.wifi.value?.toWiFI()))
@@ -581,6 +584,10 @@ class CommanderServer(
         val devices = bluetoothCommander.getBondedDevices()
 
         return toGattSuccess(Read.PairedDevices.serializeResponse(devices))
+    }
+
+    private fun handleCallLink(): Pair<Int, ByteArray> {
+        return toGattSuccess(Read.CallLink.serializeResponse(appSettings.backendUrl?.callUrl(appSettings.id)))
     }
 
     private fun handleSelectBluetooth(name: String): Pair<Int, ByteArray?> {

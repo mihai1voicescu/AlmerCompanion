@@ -22,7 +22,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import org.lighthousegames.logging.logging
 
-val Log = logging("MainActivity")
+private val Log = logging("MainActivity")
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

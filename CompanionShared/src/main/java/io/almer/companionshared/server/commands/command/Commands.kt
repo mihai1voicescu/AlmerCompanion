@@ -6,6 +6,7 @@ import io.almer.companionshared.server.commands.WriteUUID
 object Commands : CommandCatalog<Command> {
     override val ListWiFi = Read.ListWiFi
     override val PairedDevices = Read.PairedDevices
+    override val CallLink = Read.CallLink
 
     override val SelectWiFi = Write.SelectWiFi
     override val ForgetWiFi = Write.ForgetWiFi

@@ -22,6 +22,16 @@ sealed class Read<Response>(
         override val uuid = ReadUUID.PairedDevices.uuid
     }
 
+    object CallLink : Read<String?>() {
+        override fun deserializeResponse(byteArray: ByteArray): String? =
+            deserialize(byteArray)
+
+        override fun serializeResponse(response: String?): ByteArray =
+            serialize(response)
+
+        override val uuid = ReadUUID.CallLink.uuid
+    }
+
     abstract fun serializeResponse(response: Response): ByteArray
     abstract fun deserializeResponse(byteArray: ByteArray): Response
 }

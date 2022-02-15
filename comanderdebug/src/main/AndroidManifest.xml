@@ -24,6 +24,8 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
+        android:sharedUserId="almer"
+        android:sharedUserLabel="@string/almer_label"
         android:theme="@style/Theme.AlmerCompanion">
         <activity
             android:name=".MainActivity"

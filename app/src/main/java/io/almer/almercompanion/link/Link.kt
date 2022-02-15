@@ -136,6 +136,22 @@ class Link private constructor(
         return response
     }
 
+
+    suspend fun callLink(): String? {
+        val value = try {
+            peripheral.read(catalog.CallLink)
+        } catch (e: Exception) {
+            throw RuntimeException("Unable to CallLink", e)
+        }
+
+        val response = try {
+            Commands.CallLink.deserializeResponse(value)
+        } catch (e: Exception) {
+            throw RuntimeException("Unable to decode string", e)
+        }
+        return response
+    }
+
     fun scanBluetooth(): Flow<BluetoothDevice> {
         return peripheral.observe(catalog.ScanBluetooth)
             .map { Listen.ScanBluetooth.deserializeResponse(it) }

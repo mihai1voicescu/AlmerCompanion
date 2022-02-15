@@ -26,11 +26,28 @@ import io.almer.almercompanion.MainApp.Companion.mainApp
 import io.almer.almercompanion.R
 import io.almer.almercompanion.composable.background.AlmerLogoBackground
 import io.almer.almercompanion.screen.main.*
+import kotlinx.coroutines.launch
+import org.lighthousegames.logging.logging
+
+private val Log = logging("MainScreen")
 
 @Composable
 @Preview
 fun MainScreen() {
+    val scope = rememberCoroutineScope()
+    val app = mainApp()
     val context = LocalContext.current
+
+    var initialUrl by remember {
+        mutableStateOf<String?>(null)
+    }
+
+    LaunchedEffect(true) {
+        scope.launch {
+            initialUrl = app.link.callLink()
+        }
+    }
+
     val homeScreenState = rememberSaveable(
         stateSaver = Saver(
             save = { value ->
@@ -60,28 +77,26 @@ fun MainScreen() {
                         )
                     },
                     actions = {
-                        IconButton(onClick = {
-                            val url = "https://almer.io/?callId=123"
-                            val sendIntent: Intent = Intent().apply {
-                                action = Intent.ACTION_SEND
-                                putExtra(
-                                    Intent.EXTRA_TEXT,
-                                    "Call me on my Almer glasses at $url"
+                        initialUrl ?. let { url ->
+                            IconButton(onClick = {
+                                val sendIntent: Intent = Intent().apply {
+                                    action = Intent.ACTION_SEND
+                                    putExtra(
+                                        Intent.EXTRA_TEXT,
+                                        "Call me on my Almer glasses at $url"
+                                    )
+                                    putExtra(
+                                        Intent.EXTRA_HTML_TEXT,
+                                        "Call me on my Almer glasses at <a href='$url'>$url</a>"
+                                    )
+                                    type = "text/plain"
+                                }
+                            }) {
+                                Image(
+                                    painter = painterResource(id = R.drawable.ic_baseline_phone_24),
+                                    contentDescription = "Call",
                                 )
-                                putExtra(
-                                    Intent.EXTRA_HTML_TEXT,
-                                    "Call me on my Almer glasses at <a href='$url'>$url</a>"
-                                )
-                                type = "text/plain"
                             }
-
-                            val shareIntent = Intent.createChooser(sendIntent, null)
-                            startActivity(context, shareIntent, null)
-                        }) {
-                            Image(
-                                painter = painterResource(id = R.drawable.ic_baseline_phone_24),
-                                contentDescription = "Call",
-                            )
                         }
                     },
 //                backgroundColor: Color = MaterialTheme.colors.primarySurface,

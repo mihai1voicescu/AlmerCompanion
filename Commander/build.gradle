@@ -50,4 +50,7 @@ dependencies {
     implementation(project(":CompanionShared"))
 
     implementation("com.google.guava:guava:31.0.1-android")
+
+    implementation("com.russhwolf:multiplatform-settings:0.8.1")
+
 }

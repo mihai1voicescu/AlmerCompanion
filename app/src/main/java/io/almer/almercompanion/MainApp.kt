@@ -3,45 +3,27 @@ package io.almer.almercompanion
 import android.app.Application
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
-import android.bluetooth.le.ScanFilter
-import android.companion.*
 import android.content.*
 import android.net.ConnectivityManager
 import android.net.NetworkInfo
-import android.os.ParcelUuid
-import androidx.annotation.MainThread
-import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.platform.LocalContext
-import androidx.core.app.ActivityCompat.startIntentSenderForResult
-import androidx.core.content.ContentProviderCompat.requireContext
-import androidx.navigation.NavHostController
-import androidx.navigation.compose.rememberNavController
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.analytics.ktx.analytics
 import com.google.firebase.ktx.Firebase
 import com.juul.kable.Advertisement
 import com.juul.kable.AndroidPeripheral
-import com.juul.kable.Peripheral
 import com.juul.kable.peripheral
 import io.almer.almercompanion.link.Link
-import io.almer.commander.BluetoothCommander
 import io.almer.companionshared.CrashlyticsLogger
-import io.almer.companionshared.model.toBluetoothDeviceModel
 import io.almer.companionshared.server.DeviceScan
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.plus
 import org.lighthousegames.logging.KmLogging
 import org.lighthousegames.logging.LogLevelController
 import org.lighthousegames.logging.PlatformLogger
-import java.util.*
-import java.util.regex.Pattern
 
 const val SELECT_DEVICE_REQUEST_CODE = 42
 

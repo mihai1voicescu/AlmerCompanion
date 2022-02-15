@@ -3,6 +3,7 @@ package io.almer.companionshared.server.commands
 interface ReadCatalog<Type> {
     val ListWiFi: Type
     val PairedDevices: Type
+    val CallLink: Type
 }
 
 interface WriteCatalog<Type> {

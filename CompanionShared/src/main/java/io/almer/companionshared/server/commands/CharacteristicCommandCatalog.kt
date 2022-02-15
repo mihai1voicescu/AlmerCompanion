@@ -24,6 +24,8 @@ private class CharacteristicReadCatalog(val service: BluetoothGattService) :
     override val ListWiFi: BluetoothGattCharacteristic = readChar(CommandsUUID.ListWiFi)
 
     override val PairedDevices: BluetoothGattCharacteristic = readChar(CommandsUUID.PairedDevices)
+
+    override val CallLink: BluetoothGattCharacteristic = readChar(CommandsUUID.CallLink)
 }
 
 private class CharacteristicWriteCatalog(val service: BluetoothGattService) :

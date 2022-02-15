@@ -13,6 +13,7 @@ class ClientCommandCatalog(peripheral: Peripheral) : CommandCatalog<DiscoveredCh
 
     override val ListWiFi = charMap[CommandsUUID.ListWiFi]!!
     override val PairedDevices = charMap[CommandsUUID.PairedDevices]!!
+    override val CallLink = charMap[CommandsUUID.CallLink]!!
 
     override val SelectWiFi = charMap[CommandsUUID.SelectWiFi]!!
     override val ForgetWiFi = charMap[CommandsUUID.ForgetWiFi]!!
