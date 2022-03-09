@@ -44,7 +44,7 @@ fun DebugGuard() {
 
 
     val permissions = rememberMultiplePermissionsState(
-        listOf(
+        mutableListOf(
             android.Manifest.permission.ACCESS_COARSE_LOCATION,
             android.Manifest.permission.ACCESS_FINE_LOCATION,
             android.Manifest.permission.CHANGE_WIFI_STATE,
@@ -55,7 +55,11 @@ fun DebugGuard() {
             } else {
                 android.Manifest.permission.BLUETOOTH
             }
-        )
+        ).apply {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                add(android.Manifest.permission.BLUETOOTH_SCAN)
+            }
+        }
     )
 
     PermissionsRequired(
