@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "116340501031",
+    "project_id": "companion-app-d53f1",
+    "storage_bucket": "companion-app-d53f1.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:116340501031:android:b9f27239f7e9740be03c02",
+        "android_client_info": {
+          "package_name": "io.almer.almercompanion"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "116340501031-vm9e2j30ljgnjjgq36tqfdjso36ajlva.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDAZo_auSGLQli_40OChokxC8ncspPHeSM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "116340501031-vm9e2j30ljgnjjgq36tqfdjso36ajlva.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
