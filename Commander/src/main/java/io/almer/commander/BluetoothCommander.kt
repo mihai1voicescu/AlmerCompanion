@@ -85,7 +85,7 @@ class BluetoothCommander(
         bluetoothAdapter.bondedDevices.firstOrNull { it.name == name }?.removeBond()
     }
 
-    suspend fun getBondedDevices(): List<BluetoothDeviceModel> {
+    fun getBondedDevices(): List<BluetoothDeviceModel> {
         return bluetoothAdapter.bondedDevices.map(BluetoothDevice::toBluetoothDeviceModel)
     }
 

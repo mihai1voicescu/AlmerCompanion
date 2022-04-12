@@ -14,7 +14,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
-@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun <T> ListSelector(
     items: Collection<T>,
@@ -23,7 +22,6 @@ fun <T> ListSelector(
 ) {
     LazyColumn(
         Modifier.fillMaxSize(),
-//        verticalArrangement = Arrangement.SpaceEvenly,
         content = {
             items.forEach {
                 itemSelector(
@@ -71,7 +69,7 @@ fun <T> LazyListScope.itemSelector(
 
 @Composable
 @Preview
-fun ListSelectorPreview() {
+private fun ListSelectorPreview() {
     ListSelector(items = listOf("Ana", "are", "mere"), onSelect = {}) {
         Card {
             Text(it, style = MaterialTheme.typography.body1)

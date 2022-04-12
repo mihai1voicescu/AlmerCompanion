@@ -32,7 +32,6 @@ import org.lighthousegames.logging.logging
 private val Log = logging("MainScreen")
 
 @Composable
-@Preview
 fun MainScreen() {
     val scope = rememberCoroutineScope()
     val app = mainApp()

@@ -7,10 +7,11 @@ import com.google.common.cache.CacheLoader
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-data class ResponseKey (val device: BluetoothDevice?, val characteristicUUID: UUID)
+// todo see if we can add requestId
+data class ResponseKey (val device: BluetoothDevice, val characteristicUUID: UUID)
 data class ResponseValue (val value: ByteArray, val result: Int)
 
-class ResponseRegister {
+class ReadRegister {
     private val cache = CacheBuilder
         .newBuilder()
         .expireAfterWrite(3, TimeUnit.MINUTES)
@@ -18,11 +19,11 @@ class ResponseRegister {
         .maximumSize(20)
         .build<ResponseKey, ResponseValue>()
 
-    fun add(device: BluetoothDevice?, characteristic: BluetoothGattCharacteristic, result: Int, value: ByteArray) {
+    fun add(device: BluetoothDevice, characteristic: BluetoothGattCharacteristic, result: Int, value: ByteArray) {
         cache.put(ResponseKey(device, characteristic.uuid), ResponseValue(value, result))
     }
 
-    fun get(device: BluetoothDevice?, characteristic: BluetoothGattCharacteristic): ResponseValue? {
+    fun get(device: BluetoothDevice, characteristic: BluetoothGattCharacteristic): ResponseValue? {
         return cache.getIfPresent(ResponseKey(device, characteristic.uuid))
     }
 }

@@ -33,7 +33,6 @@ import org.lighthousegames.logging.logging
 private val Log = logging("WiFiScreen")
 
 @Composable
-@Preview
 fun WiFiScreen() {
     val app = mainApp()
 

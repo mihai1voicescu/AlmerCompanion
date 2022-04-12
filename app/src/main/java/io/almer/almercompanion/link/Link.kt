@@ -6,17 +6,10 @@ import com.juul.kable.*
 import io.almer.companionshared.model.BluetoothDevice
 import io.almer.companionshared.model.WiFi
 import io.almer.companionshared.model.WifiConnectionInfo
-import io.almer.companionshared.server.commands.ClientCommandCatalog
-import io.almer.companionshared.server.MESSAGE_UUID
-import io.almer.companionshared.server.SERVICE_UUID
-import io.almer.companionshared.server.commands.CCCD
-import io.almer.companionshared.server.commands.command.Commands
-import io.almer.companionshared.server.commands.command.Listen
-import io.almer.companionshared.server.commands.command.Write
+import io.almer.companionshared.server.CCCD
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
 import kotlinx.serialization.ExperimentalSerializationApi
 import org.lighthousegames.logging.logging
 import kotlin.RuntimeException
@@ -38,136 +31,75 @@ class Link private constructor(
     private val peripheral: Peripheral,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default),
 ) {
-    private val catalog = ClientCommandCatalog(peripheral)
-
     private val _wifi = MutableStateFlow<WiFi?>(UNKNOWN_WIFI)
     val wifi = _wifi.asStateFlow()
 
     private val _bluetooth = MutableStateFlow<BluetoothDevice?>(UNKNOWN_BLUETOOTH)
     val bluetooth: StateFlow<BluetoothDevice?> = _bluetooth
-    val messageCharacteristic = characteristicOf(SERVICE_UUID.toString(), MESSAGE_UUID.toString())
 
     val state = peripheral.state.stateIn(scope, SharingStarted.Eagerly, State.Connecting.Bluetooth)
 
-    suspend fun sendMessage(message: String) {
-        scope.launch {
-            val messageBytes = message.toByteArray(Charsets.UTF_8)
-            peripheral.write(
-                messageCharacteristic,
-                messageBytes,
-//                    writeType = WriteType.WithoutResponse
-            )
-//                _messages.value = _messages.value + message
-        }.join()
-    }
-
-
-    init {
-        //todo collect wifi
-//        scope.launch {
-//            scope.launch {
-//                wifiCommander.wifi.collect {
-//                    _wifi.emit(it?.toWiFI())
-//                }
-//            }
-//            _wifi.emit(wifiCommander.wifi.value?.toWiFI())
-//        }
-    }
+    val companionRequester = CompanionRequester(peripheral)
 
     suspend fun listWiFi(): List<WiFi> {
-        val value = try {
-            peripheral.read(catalog.ListWiFi)
+        return try {
+            companionRequester.listWifi()
         } catch (e: Exception) {
             throw RuntimeException("Unable to ListWifi", e)
         }
-
-        val response = try {
-            Commands.ListWiFi.deserializeResponse(value)
-        } catch (e: Exception) {
-            throw RuntimeException("Unable to decode string", e)
-        }
-        return response
     }
 
 
     private fun listen() {
-        scope.launch {
-            peripheral.observe(catalog.WiFi).map { Listen.WiFi.deserializeResponse(it) }.collect {
-                _wifi.value = it
-            }
-        }
+        companionRequester.listenWifi().onEach {
+            _wifi.value = it
+        }.launchIn(scope)
 
-        scope.launch {
-            peripheral.observe(catalog.Bluetooth).map { Listen.Bluetooth.deserializeResponse(it) }
-                .collect {
-                    _bluetooth.value = it
-                }
-        }
+        companionRequester.listenBluetooth().onEach {
+            _bluetooth.value = it
+        }.launchIn(scope)
     }
 
     suspend fun selectWiFi(networkId: Int) {
-        return peripheral.write(catalog.SelectWiFi, Write.SelectWiFi.serializeRequest(networkId))
+        return companionRequester.selectWifi(networkId)
     }
 
     suspend fun forgetWiFi(networkId: Int) {
-        return peripheral.write(catalog.ForgetWiFi, Write.ForgetWiFi.serializeRequest(networkId))
+        return companionRequester.forgetWiFi(networkId)
     }
 
     suspend fun connectToWifi(connectionInfo: WifiConnectionInfo): String? {
-        peripheral.write(
-            catalog.ConnectToWifi,
-            Write.ConnectToWifi.serializeRequest(connectionInfo)
-        )
+        companionRequester.connectToWifi(connectionInfo)
         return null
     }
 
     suspend fun pairedDevices(): List<BluetoothDevice> {
-        val value = try {
-            peripheral.read(catalog.PairedDevices)
+        return try {
+            companionRequester.pairedDevices()
         } catch (e: Exception) {
             throw RuntimeException("Unable to ListWifi", e)
         }
-
-        val response = try {
-            Commands.PairedDevices.deserializeResponse(value)
-        } catch (e: Exception) {
-            throw RuntimeException("Unable to decode string", e)
-        }
-        return response
     }
 
 
     suspend fun callLink(): String? {
-        val value = try {
-            peripheral.read(catalog.CallLink)
+        return try {
+            companionRequester.callLink()
         } catch (e: Exception) {
             throw RuntimeException("Unable to CallLink", e)
         }
-
-        val response = try {
-            Commands.CallLink.deserializeResponse(value)
-        } catch (e: Exception) {
-            throw RuntimeException("Unable to decode string", e)
-        }
-        return response
     }
 
     fun scanBluetooth(): Flow<BluetoothDevice> {
-        return peripheral.observe(catalog.ScanBluetooth)
-            .map { Listen.ScanBluetooth.deserializeResponse(it) }
-            .onCompletion {
-                scope.launch {
-                    peripheral.disableListen(catalog.ScanBluetooth)
-                }
-            }
+        return companionRequester.scanBluetooth()
     }
 
     suspend fun selectBluetooth(name: String) {
-        peripheral.write(catalog.SelectBluetooth, Write.SelectBluetooth.serializeRequest(name))
+        companionRequester.selectBluetooth(name)
     }
 
     suspend fun forgetBluetooth(name: String) {
-        peripheral.write(catalog.ForgetBluetooth, Write.ForgetBluetooth.serializeRequest(name))
+        companionRequester.forgetBluetooth(name)
     }
 
     companion object {
@@ -196,8 +128,6 @@ class Link private constructor(
             Log.i { "MTU set to $newMtu" }
 
             val link = Link(context, peripheral, scope)
-
-            link.sendMessage("Hello")
 
             link.listen()
 

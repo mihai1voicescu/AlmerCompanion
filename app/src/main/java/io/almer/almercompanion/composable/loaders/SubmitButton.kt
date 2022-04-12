@@ -25,11 +25,6 @@ fun SubmitButtonContent(
                     .matchParentSize()
                     .scale(0.5f)
             )
-//            CircularProgressIndicator(
-//                color = Color.Red,
-//                modifier = Modifier
-//                    .matchParentSize()
-//            )
         }
     }
 }
@@ -49,11 +44,6 @@ fun SubmitButtonContent(
                     .matchParentSize()
                     .scale(0.5f)
             )
-//            CircularProgressIndicator(
-//                color = Color.Red,
-//                modifier = Modifier
-//                    .matchParentSize()
-//            )
         }
     }
 
