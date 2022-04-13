@@ -25,6 +25,7 @@ suspend fun Peripheral.disableListen(characteristic: DiscoveredCharacteristic) {
     }
 }
 
+
 interface Link {
     val wifi: StateFlow<WiFi?>
     val bluetooth: StateFlow<BluetoothDevice?>
@@ -40,6 +41,8 @@ interface Link {
     suspend fun forgetBluetooth(name: String)
 
     companion object {
+        val Log = logging()
+
         suspend operator fun invoke(
             context: Context,
             peripheral: AndroidPeripheral,
@@ -63,7 +66,8 @@ class LinkImpl private constructor(
     private val _bluetooth = MutableStateFlow<BluetoothDevice?>(UNKNOWN_BLUETOOTH)
     override val bluetooth: StateFlow<BluetoothDevice?> = _bluetooth
 
-    override val state: StateFlow<State> = peripheral.state.stateIn(scope, SharingStarted.Eagerly, State.Connecting.Bluetooth)
+    override val state: StateFlow<State> =
+        peripheral.state.stateIn(scope, SharingStarted.Eagerly, State.Connecting.Bluetooth)
 
     private val companionRequester = CompanionRequester(peripheral)
 
@@ -71,7 +75,8 @@ class LinkImpl private constructor(
         return try {
             companionRequester.listWifi()
         } catch (e: Exception) {
-            throw RuntimeException("Unable to ListWifi", e)
+            Log.e(e) { "Unable to ListWifi" }
+            emptyList()
         }
     }
 

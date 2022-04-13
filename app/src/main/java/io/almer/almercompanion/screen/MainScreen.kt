@@ -43,11 +43,11 @@ fun MainScreen(
         mutableStateOf<String?>(null)
     }
 
-    LaunchedEffect(true) {
-        scope.launch {
-            initialUrl = link.callLink()
-        }
-    }
+//    LaunchedEffect(true) {
+//        scope.launch {
+//            initialUrl = link.callLink()
+//        }
+//    }
 
     val homeScreenState = rememberSaveable(
         stateSaver = Saver(

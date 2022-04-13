@@ -121,7 +121,7 @@ private class ListenHandlerActionImpl<Response, Cmd : ListenCommand<Response>>(
     ).apply {
         addDescriptor(
             BluetoothGattDescriptor(
-                UUID.fromString("00002902-0000-1000-8000-00805f9b34fb"),
+                CCCD,
                 BluetoothGattDescriptor.PERMISSION_WRITE
             )
         )
@@ -215,21 +215,20 @@ abstract class Handler(
                     when (newState) {
                         BluetoothProfile.STATE_DISCONNECTED -> {
                             mtu = 23
-                            startAdvertisement()
+//                            startAdvertisement()
                         }
                         /** The profile is in connecting state  */
                         BluetoothProfile.STATE_CONNECTING -> {
-                            stopAdvertising()
+//                            stopAdvertising()
                         }
                         /** The profile is in connected state  */
                         BluetoothProfile.STATE_CONNECTED -> {
-                            stopAdvertising()
+//                            stopAdvertising()
                         }
                         /** The profile is in disconnecting state  */
                         BluetoothProfile.STATE_DISCONNECTING -> {}
                     }
                     _state.value = HandlerState.Connected(device)
-                    stopAdvertising()
                 } else {
                     Log.e { "Error on connecting state change $device ${device.name} status:$status newState:$newState" }
                 }
@@ -280,10 +279,6 @@ abstract class Handler(
                     Log.w { "Write request w/o descriptors are not supported" }
                     return
                 }
-                if (responseNeeded) {
-                    Log.w { "Response requested but not supported" }
-                    return
-                }
                 if (value == null) {
                     Log.w { "Write without value are not supported" }
                     return
@@ -303,6 +298,8 @@ abstract class Handler(
                 } else {
                     Log.w { "No other descriptor than CCCD is supported" }
                 }
+
+                gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null)
             }
 
             private val writeRegister = WriteRegister()
@@ -446,17 +443,41 @@ abstract class Handler(
             }
         }
 
-    private val service =
-        BluetoothGattService(SERVICE_UUID, BluetoothGattService.SERVICE_TYPE_PRIMARY).apply {
-            addCharacteristics(this)
-        }
+    /**
+     * Custom callback after Advertising succeeds or fails to start. Broadcasts the error code
+     * in an Intent to be picked up by AdvertiserFragment and stops this Service.
+     */
+    private val advertiseCallback =
+        object : AdvertiseCallback() {
+            override fun onStartFailure(errorCode: Int) {
+                super.onStartFailure(errorCode)
+                // Send error state to display
+                val errorMessage = "Advertise failed with error: $errorCode"
+                Log.e { errorMessage }
 
+                _state.value = HandlerState.Erred(Throwable(errorMessage))
+            }
+
+            override fun onStartSuccess(settingsInEffect: AdvertiseSettings) {
+                super.onStartSuccess(settingsInEffect)
+                Log.d { "Advertising successfully started" }
+                _state.value = HandlerState.Advertising
+            }
+        }
 
     val gattServer: BluetoothGattServer = bluetoothManager.openGattServer(
         context,
         gattServerCallback
-    ).apply {
-        addService(service)
+    )
+
+
+    fun mountService() {
+        val service =
+            BluetoothGattService(SERVICE_UUID, BluetoothGattService.SERVICE_TYPE_PRIMARY).apply {
+                addCharacteristics(this)
+            }
+
+        gattServer.addService(service)
     }
 
     private fun <T : HandlerAction<*>> registerPerAction(
@@ -490,14 +511,14 @@ abstract class Handler(
 
 
     suspend fun handleWrite(uuid: UUID, value: ByteArray) {
-        val handler = _writeActions[uuid] ?: return Log.e { "Handler $uuid not found" }
+        val handler = _writeActions[uuid] ?: return Log.e { "Handler $uuid not found in writeActions ${_writeActions.keys}" }
 
         handler.write(value)
     }
 
     suspend fun handleRead(uuid: UUID): ByteArray {
         val handler = _readActions[uuid] ?: return ByteArray(0).also {
-            Log.e { "Handler $uuid not found" }
+            Log.e { "Handler $uuid not found in readActions ${_readActions.keys}" }
         }
 
         return handler.read()
@@ -508,8 +529,8 @@ abstract class Handler(
 
     fun handleEnableListen(device: BluetoothDevice, descriptor: BluetoothGattDescriptor) {
         val handler =
-            _listenActions[descriptor.uuid]
-                ?: return Log.e { "Handler ${descriptor.uuid} not found" }
+            _listenActions[descriptor.characteristic.uuid]
+                ?: return Log.e { "Handler ${descriptor.characteristic.uuid} not found in listenActions ${_listenActions.keys}" }
 
         val job = scope.launch {
             handler.listen().collect {
@@ -540,7 +561,11 @@ abstract class Handler(
             _writeActions,
             _readActions,
             _listenActions
-        ).forEach { it.forEach { service.addCharacteristic(it.value.characteristic) } }
+        ).forEach {
+            it.forEach {
+                service.addCharacteristic(it.value.characteristic)
+            }
+        }
     }
 
     /**
@@ -552,6 +577,9 @@ abstract class Handler(
         advertiser.startAdvertising(advertiseSettings, advertiseData, advertiseCallback)
     }
 
+    init {
+        startAdvertisement()
+    }
 
     /**
      * Stops BLE Advertising.
@@ -567,29 +595,6 @@ abstract class Handler(
 
     fun close() {
         scope.cancel()
-    }
-
-    /**
-     * Custom callback after Advertising succeeds or fails to start. Broadcasts the error code
-     * in an Intent to be picked up by AdvertiserFragment and stops this Service.
-     */
-    private val advertiseCallback by lazy {
-        object : AdvertiseCallback() {
-            override fun onStartFailure(errorCode: Int) {
-                super.onStartFailure(errorCode)
-                // Send error state to display
-                val errorMessage = "Advertise failed with error: $errorCode"
-                Log.e { errorMessage }
-
-                _state.value = HandlerState.Erred(Throwable(errorMessage))
-            }
-
-            override fun onStartSuccess(settingsInEffect: AdvertiseSettings) {
-                super.onStartSuccess(settingsInEffect)
-                Log.d { "Advertising successfully started" }
-                _state.value = HandlerState.Advertising
-            }
-        }
     }
 }
 

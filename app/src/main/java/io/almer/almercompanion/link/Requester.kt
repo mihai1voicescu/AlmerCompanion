@@ -2,6 +2,7 @@ package io.almer.almercompanion.link
 
 import com.juul.kable.Peripheral
 import com.juul.kable.characteristicOf
+import io.almer.almercompanion.screen.wifi.Log
 import io.almer.companionshared.server.SERVICE_UUID
 import io.almer.companionshared.server.commands.command.*
 import kotlinx.coroutines.GlobalScope
@@ -17,12 +18,6 @@ abstract class RequesterActionImpl<Cmd : Command<*>>(
     protected val peripheral: Peripheral
 ) : ActionImpl<Cmd>(command) {
     val characteristic = characteristicOf(SERVICE_UUID.toString(), command.uuid.toString())
-
-    val discoveredCharacteristic =
-        peripheral.services!!
-            .first { it.serviceUuid == characteristic.serviceUuid }
-            .characteristics
-            .first { it.characteristicUuid == characteristic.characteristicUuid }
 }
 
 
@@ -83,6 +78,25 @@ private class ListenRequesterActionImpl<Response, Cmd : ListenCommand<Response>>
             .map { command.decode(it) }
             .onCompletion {
                 GlobalScope.launch {
+                    // todo check
+                    val discoveredCharacteristic =
+                        try {
+                            peripheral.services!!
+                                .first { it.serviceUuid == characteristic.serviceUuid }
+                                .characteristics
+                                .first { it.characteristicUuid == characteristic.characteristicUuid }
+                        } catch (e: Throwable) {
+                            Log.e(e) {
+                                "Unable to find the ${characteristic.serviceUuid} in ${
+                                    peripheral.services!!
+                                        .first { it.serviceUuid == characteristic.serviceUuid }
+                                        .characteristics
+                                }"
+                            }
+
+                            throw e
+                        }
+
                     peripheral.disableListen(discoveredCharacteristic)
                 }
             }

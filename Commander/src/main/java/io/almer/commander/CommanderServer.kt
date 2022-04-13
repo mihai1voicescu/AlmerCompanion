@@ -98,6 +98,10 @@ class CommanderServer(
 
     private val handler = CompanionHandler()
 
+    init {
+        handler.mountService()
+    }
+
     override fun close() {
         handler.close()
     }

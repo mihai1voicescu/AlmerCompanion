@@ -15,6 +15,7 @@ class CommanderService : Service() {
 
 
     override fun onCreate() {
+        Log.i { "Commander service started" }
         super.onCreate()
         commanderServer = CommanderServer(this)
     }
