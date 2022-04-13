@@ -14,9 +14,9 @@ import com.juul.kable.Advertisement
 import com.juul.kable.State
 import io.almer.almercompanion.MainApp.Companion.mainApp
 import io.almer.almercompanion.composable.select.ListSelector
+import io.almer.almercompanion.link.Link
 import io.almer.almercompanion.screen.*
 import io.almer.almercompanion.ui.theme.AlmerCompanionTheme
-import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -99,13 +99,12 @@ class ResetState {
     }
 }
 
-@OptIn(InternalCoroutinesApi::class)
 @Composable
-fun LinkEnsure() {
-    val app = mainApp()
-
+fun LinkEnsure(
+    app: MainApp = mainApp(),
+    link: Link? = app.linkState.collectAsState().value
+) {
     val scope = rememberCoroutineScope()
-    val link by app.linkState.collectAsState()
 
     var resetState by remember {
         mutableStateOf(ResetState())
@@ -119,8 +118,7 @@ fun LinkEnsure() {
         mutableStateOf<Job?>(null)
     }
 
-    val currentLink = link
-    if (currentLink == null) {
+    if (link == null) {
         LaunchedEffect(resetState) {
             advertisers.clear()
 
@@ -154,7 +152,7 @@ fun LinkEnsure() {
         }
     } else {
 
-        val linkState by currentLink.state.collectAsState()
+        val linkState by link.state.collectAsState()
 
         scanJob?.apply {
             if (isActive) {
@@ -167,7 +165,9 @@ fun LinkEnsure() {
             State.Connecting.Bluetooth -> Text("Link Connecting")
             State.Connecting.Services -> Text("Link Connecting")
             State.Connecting.Observes -> Text("Link Connecting")
-            State.Connected -> NavigationBootstrap()
+            State.Connected -> {
+                App(link = link)
+            }
             State.Disconnecting -> Text("Link Disconnecting")
             is State.Disconnected -> {
                 advertisers.clear()
@@ -179,6 +179,15 @@ fun LinkEnsure() {
                 Text("Link Disconnected")
             }
         }
+    }
+}
+
+@Composable
+fun App(
+    link: Link
+) {
+    CompositionLocalProvider(LocalLink provides link) {
+        NavigationBootstrap()
     }
 }
 

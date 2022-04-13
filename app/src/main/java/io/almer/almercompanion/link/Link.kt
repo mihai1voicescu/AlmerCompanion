@@ -25,23 +25,49 @@ suspend fun Peripheral.disableListen(characteristic: DiscoveredCharacteristic) {
     }
 }
 
-@OptIn(ExperimentalSerializationApi::class)
-class Link private constructor(
+interface Link {
+    val wifi: StateFlow<WiFi?>
+    val bluetooth: StateFlow<BluetoothDevice?>
+    suspend fun listWiFi(): List<WiFi>
+
+    suspend fun selectWiFi(networkId: Int)
+    suspend fun forgetWiFi(networkId: Int)
+    suspend fun connectToWifi(connectionInfo: WifiConnectionInfo): String?
+    suspend fun pairedDevices(): List<BluetoothDevice>
+    suspend fun callLink(): String?
+    fun scanBluetooth(): Flow<BluetoothDevice>
+    suspend fun selectBluetooth(name: String)
+    suspend fun forgetBluetooth(name: String)
+
+    companion object {
+        suspend operator fun invoke(
+            context: Context,
+            peripheral: AndroidPeripheral,
+            scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
+        ): Link {
+            return LinkImpl(context, peripheral, scope)
+        }
+    }
+
+    val state: StateFlow<State>
+}
+
+class LinkImpl private constructor(
     private val context: Context,
     private val peripheral: Peripheral,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default),
-) {
+) : Link {
     private val _wifi = MutableStateFlow<WiFi?>(UNKNOWN_WIFI)
-    val wifi = _wifi.asStateFlow()
+    override val wifi = _wifi.asStateFlow()
 
     private val _bluetooth = MutableStateFlow<BluetoothDevice?>(UNKNOWN_BLUETOOTH)
-    val bluetooth: StateFlow<BluetoothDevice?> = _bluetooth
+    override val bluetooth: StateFlow<BluetoothDevice?> = _bluetooth
 
-    val state = peripheral.state.stateIn(scope, SharingStarted.Eagerly, State.Connecting.Bluetooth)
+    override val state: StateFlow<State> = peripheral.state.stateIn(scope, SharingStarted.Eagerly, State.Connecting.Bluetooth)
 
-    val companionRequester = CompanionRequester(peripheral)
+    private val companionRequester = CompanionRequester(peripheral)
 
-    suspend fun listWiFi(): List<WiFi> {
+    override suspend fun listWiFi(): List<WiFi> {
         return try {
             companionRequester.listWifi()
         } catch (e: Exception) {
@@ -60,20 +86,20 @@ class Link private constructor(
         }.launchIn(scope)
     }
 
-    suspend fun selectWiFi(networkId: Int) {
+    override suspend fun selectWiFi(networkId: Int) {
         return companionRequester.selectWifi(networkId)
     }
 
-    suspend fun forgetWiFi(networkId: Int) {
+    override suspend fun forgetWiFi(networkId: Int) {
         return companionRequester.forgetWiFi(networkId)
     }
 
-    suspend fun connectToWifi(connectionInfo: WifiConnectionInfo): String? {
+    override suspend fun connectToWifi(connectionInfo: WifiConnectionInfo): String? {
         companionRequester.connectToWifi(connectionInfo)
         return null
     }
 
-    suspend fun pairedDevices(): List<BluetoothDevice> {
+    override suspend fun pairedDevices(): List<BluetoothDevice> {
         return try {
             companionRequester.pairedDevices()
         } catch (e: Exception) {
@@ -82,7 +108,7 @@ class Link private constructor(
     }
 
 
-    suspend fun callLink(): String? {
+    override suspend fun callLink(): String? {
         return try {
             companionRequester.callLink()
         } catch (e: Exception) {
@@ -90,15 +116,15 @@ class Link private constructor(
         }
     }
 
-    fun scanBluetooth(): Flow<BluetoothDevice> {
+    override fun scanBluetooth(): Flow<BluetoothDevice> {
         return companionRequester.scanBluetooth()
     }
 
-    suspend fun selectBluetooth(name: String) {
+    override suspend fun selectBluetooth(name: String) {
         companionRequester.selectBluetooth(name)
     }
 
-    suspend fun forgetBluetooth(name: String) {
+    override suspend fun forgetBluetooth(name: String) {
         companionRequester.forgetBluetooth(name)
     }
 
@@ -127,7 +153,7 @@ class Link private constructor(
             val newMtu = peripheral.requestMtu(512)
             Log.i { "MTU set to $newMtu" }
 
-            val link = Link(context, peripheral, scope)
+            val link = LinkImpl(context, peripheral, scope)
 
             link.listen()
 

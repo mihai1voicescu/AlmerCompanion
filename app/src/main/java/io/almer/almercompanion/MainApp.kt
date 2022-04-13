@@ -49,7 +49,6 @@ class MainApp : Application() {
     private val _link = MutableStateFlow<Link?>(null)
 
     val linkState = _link.asStateFlow()
-    val link get() = _link.value ?: error("No link is selected")
 
     suspend fun selectDevice(advertisement: Advertisement) {
         val peripheral: AndroidPeripheral = scope.peripheral(advertisement) as AndroidPeripheral
@@ -129,7 +128,7 @@ class MainApp : Application() {
     }
 
     fun getCurrentBluetoothState(): BluetoothState {
-        val mBluetoothAdapter: BluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
+        val mBluetoothAdapter: BluetoothAdapter? = BluetoothAdapter.getDefaultAdapter()
         if (mBluetoothAdapter == null) {
             return BluetoothState.NotSupported
         } else if (!mBluetoothAdapter.isEnabled()) {

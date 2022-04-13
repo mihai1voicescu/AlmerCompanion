@@ -10,7 +10,6 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class DeviceScan(
     private val context: Context,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default)

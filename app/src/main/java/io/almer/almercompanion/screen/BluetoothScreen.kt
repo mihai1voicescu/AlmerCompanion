@@ -12,6 +12,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import io.almer.almercompanion.LocalLink
 import io.almer.almercompanion.LocalNavHostController
 import io.almer.almercompanion.MainApp.Companion.mainApp
 import io.almer.almercompanion.R
@@ -21,6 +22,7 @@ import io.almer.almercompanion.composable.navigation.BackButton
 import io.almer.almercompanion.composable.navigation.ReturnableScreen
 import io.almer.almercompanion.composable.select.itemSelector
 import io.almer.almercompanion.composable.text.BodyText
+import io.almer.almercompanion.link.Link
 import io.almer.almercompanion.safePopBackStack
 import io.almer.companionshared.model.BluetoothDevice
 import kotlinx.coroutines.*
@@ -28,8 +30,9 @@ import kotlinx.coroutines.flow.*
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun BluetoothScreen() {
-    val app = mainApp()
+fun BluetoothScreen(
+    link: Link = LocalLink.current
+) {
     val navController = LocalNavHostController.current
     val scope = rememberCoroutineScope()
 
@@ -43,7 +46,7 @@ fun BluetoothScreen() {
         if (scanningJob == null) {
             scanDevices.clear()
 
-            val localJob = app.link.scanBluetooth()
+            val localJob = link.scanBluetooth()
                 .onEach {
                     scanDevices.add(it)
                 }
@@ -68,7 +71,7 @@ fun BluetoothScreen() {
 
     fun onSelect(device: BluetoothDevice, toggle: () -> Unit) {
         scope.launch {
-            app.link.selectBluetooth(device.name)
+            link.selectBluetooth(device.name)
             toggle()
             navController.safePopBackStack()
         }
@@ -76,7 +79,7 @@ fun BluetoothScreen() {
 
     fun onForgetSelect(device: BluetoothDevice) {
         scope.launch {
-            app.link.forgetBluetooth(device.name)
+            link.forgetBluetooth(device.name)
         }
     }
 
@@ -102,7 +105,7 @@ fun BluetoothScreen() {
             stateLoader = {
                 delay(300)
 
-                app.link.pairedDevices()
+                link.pairedDevices()
             }
         ) { _list ->
             val list = remember {

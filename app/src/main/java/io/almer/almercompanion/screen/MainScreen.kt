@@ -22,9 +22,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat.startActivity
 import androidx.navigation.NavController
+import io.almer.almercompanion.LocalLink
 import io.almer.almercompanion.MainApp.Companion.mainApp
 import io.almer.almercompanion.R
 import io.almer.almercompanion.composable.background.AlmerLogoBackground
+import io.almer.almercompanion.link.Link
 import io.almer.almercompanion.screen.main.*
 import kotlinx.coroutines.launch
 import org.lighthousegames.logging.logging
@@ -32,10 +34,10 @@ import org.lighthousegames.logging.logging
 private val Log = logging("MainScreen")
 
 @Composable
-fun MainScreen() {
+fun MainScreen(
+    link: Link = LocalLink.current
+) {
     val scope = rememberCoroutineScope()
-    val app = mainApp()
-    val context = LocalContext.current
 
     var initialUrl by remember {
         mutableStateOf<String?>(null)
@@ -43,7 +45,7 @@ fun MainScreen() {
 
     LaunchedEffect(true) {
         scope.launch {
-            initialUrl = app.link.callLink()
+            initialUrl = link.callLink()
         }
     }
 
@@ -76,7 +78,7 @@ fun MainScreen() {
                         )
                     },
                     actions = {
-                        initialUrl ?. let { url ->
+                        initialUrl?.let { url ->
                             IconButton(onClick = {
                                 val sendIntent: Intent = Intent().apply {
                                     action = Intent.ACTION_SEND

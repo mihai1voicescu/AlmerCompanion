@@ -19,9 +19,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import io.almer.almercompanion.LocalLink
 import io.almer.almercompanion.LocalNavHostController
 import io.almer.almercompanion.MainApp.Companion.mainApp
 import io.almer.almercompanion.R
+import io.almer.almercompanion.link.Link
 import io.almer.almercompanion.screen.pathToBluetoothScreen
 import io.almer.almercompanion.screen.pathToWifiScreen
 
@@ -53,10 +55,10 @@ private fun Battery() {
 
 @Composable
 @Preview
-private fun WiFi() {
-    val app = mainApp()
-
-    val wifi by app.link.wifi.collectAsState()
+private fun WiFi(
+    link: Link = LocalLink.current
+) {
+    val wifi by link.wifi.collectAsState()
     val nav = LocalNavHostController.current
     InfoItem(
         name = stringResource(R.string.info_item_wifi),
@@ -71,10 +73,10 @@ private fun WiFi() {
 
 @Composable
 @Preview
-private fun Bluetooth() {
-    val app = mainApp()
-
-    val headset by app.link.bluetooth.collectAsState()
+private fun Bluetooth(
+    link: Link = LocalLink.current
+) {
+    val headset by link.bluetooth.collectAsState()
 
     BluetoothView(headset?.name ?: "Not connected")
 }
